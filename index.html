@@ -777,7 +777,7 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
 <!-- end of #root -->
 
 <script>
-var API='https://script.google.com/macros/s/AKfycbyWPiU96RAr0R65SfGh1VYs6tHU_gycqZy3k2JXMSB2FgheT4lLk8wmXctbSWyi-YcJlg/exec';
+var API='https://script.google.com/macros/s/AKfycbyBylPY8WvlOT137aZgk602RpqPLYBcaMFs-bHSdvqOpmclPej3lCazN3926WcDiEEhjg/exec';
 var CH={},isDark=true,raw=null,cur=null,curTeam='All',curIndvTeam='All';
 var TC=['#5b6ef5','#18c97a','#9b72f5','#f5a623','#f05252','#22c4c4','#0aaa62'];
 var TEAM_COLORS={};
@@ -928,6 +928,52 @@ function process(json,spId){
     if(!amap[asn])amap[asn]={n:asn,team:team,tot:0,done:0,est:0,log:0,times:[]};
     amap[asn].tot++; amap[asn].est+=est; amap[asn].log+=log;
     if(isDone){amap[asn].done++;if(log>0)amap[asn].times.push(log);}
+  });
+
+  // ── Parent owner's "own" portion ──
+  //
+  // A parent task with subtasks is skipped above (allItems excludes them) to
+  // avoid double-counting — because fetchAsanaData() rolls up subtask totals
+  // into the parent's est/log. But the parent CAN have its own work too:
+  // coordination, review, planning that the parent owner logged ON the parent
+  // task itself. That portion was getting lost.
+  //
+  // Compute it as: parent.est - sum(subtask.est). If positive, attribute it
+  // to the parent's owner (totals + amap + tmap). Doesn't touch task counts
+  // (done/prog/ns) — those still come from leaves + subtasks.
+  var subEstByParent = {}, subLogByParent = {};
+  subtasks.forEach(function(s){
+    var p = (s.parentTask||'').trim();
+    if(!p) return;
+    subEstByParent[p] = (subEstByParent[p]||0) + (parseFloat(s.estTime)||0);
+    subLogByParent[p] = (subLogByParent[p]||0) + (parseFloat(s.timeLog)||0);
+  });
+  tasks.forEach(function(t){
+    var name = (t.taskName||'').trim();
+    if(!parentsWithSubtasks[name]) return; // only parents-with-subs
+    var rolledEst = parseFloat(t.estTime)||0;
+    var rolledLog = parseFloat(t.timeLog)||0;
+    var ownEst = Math.max(0, rolledEst - (subEstByParent[name]||0));
+    var ownLog = Math.max(0, rolledLog - (subLogByParent[name]||0));
+    if(!ownEst && !ownLog) return;
+
+    totEst += ownEst; totLog += ownLog;
+
+    var team = t.teamCategory||'';
+    if(team){
+      tc(team);
+      if(!tmap[team]) tmap[team] = {n:team,done:0,prog:0,ns:0,ovd:0,est:0,log:0,tot:0};
+      tmap[team].est += ownEst;
+      tmap[team].log += ownLog;
+      // intentionally NOT incrementing tmap[team].tot (parent isn't a leaf)
+    }
+
+    var asn = t.assignee||'Unassigned';
+    if(!amap[asn]) amap[asn] = {n:asn,team:team,tot:0,done:0,est:0,log:0,times:[]};
+    amap[asn].est += ownEst;
+    amap[asn].log += ownLog;
+    // intentionally NOT incrementing amap[asn].tot or .done — parent is
+    // a container, real "done" credit lives on subtasks
   });
 
   // ── Merge sprint-period bugs into time/effort metrics ──
@@ -2816,6 +2862,35 @@ function buildMemberBuckets(d){
     var parentName = (s.parentTask||'').trim();
     var ownsParent = b.tasks.some(function(t){ return (t.taskName||'').trim() === parentName; });
     if(!ownsParent) b.orphanSubs.push(s);
+  });
+
+  // ── Parent owner's "own" portion ──
+  // Same idea as in process(): parent.est/log includes rolled-up subtask
+  // totals. Subtract subtask totals to get parent's own work, then attribute
+  // that to the parent's owner. Doesn't touch task counts (.total/.done/etc.)
+  // — those still belong to leaves + subtasks.
+  var subEstByParent = {}, subLogByParent = {};
+  subtasks.forEach(function(s){
+    var p = (s.parentTask||'').trim();
+    if(!p) return;
+    subEstByParent[p] = (subEstByParent[p]||0) + (parseFloat(s.estTime)||0);
+    subLogByParent[p] = (subLogByParent[p]||0) + (parseFloat(s.timeLog)||0);
+  });
+  tasks.forEach(function(t){
+    var name = (t.taskName||'').trim();
+    if(!parentsWithSubs[name]) return; // only parents-with-subs
+    var rolledEst = parseFloat(t.estTime)||0;
+    var rolledLog = parseFloat(t.timeLog)||0;
+    var ownEst = Math.max(0, rolledEst - (subEstByParent[name]||0));
+    var ownLog = Math.max(0, rolledLog - (subLogByParent[name]||0));
+    if(!ownEst && !ownLog) return;
+    var asn = (t.assignee||'').trim() || 'Unassigned';
+    var bk = bucket(asn, t.teamCategory);
+    bk.totEst += ownEst;
+    bk.totLog += ownLog;
+    // intentionally NOT touching .total/.done/.prog/.ns — parent counts
+    // are derived from subtasks; this only credits the parent owner with
+    // their non-subtask hours
   });
 
   // ── Merge sprint-period bugs into per-member time totals ──
