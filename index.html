@@ -68,17 +68,38 @@ body{font-family:var(--font-body);font-size:13px;transition:background .3s,color
 .sb-brand{overflow:hidden}
 .sb-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}
 .sb-sub{font-size:10px;color:var(--mut);margin-top:2px}
-.sb-nav{flex:1;padding:14px 8px;overflow-y:auto}
+.sb-nav{flex:1;padding:14px 8px;overflow-y:auto;position:relative}
 .sb-group{font-size:9px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;padding:10px 10px 6px;margin-top:6px}
 .sb-group:first-child{margin-top:0}
-.sb-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;font-size:12px;color:var(--mut);cursor:pointer;transition:all .12s;margin-bottom:2px;text-decoration:none;font-weight:500}
+.sb-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;font-size:12px;color:var(--mut);cursor:pointer;transition:color .25s cubic-bezier(.4,0,.2,1),background-color .25s cubic-bezier(.4,0,.2,1),transform .25s cubic-bezier(.4,0,.2,1);margin-bottom:2px;text-decoration:none;font-weight:500;position:relative;z-index:1}
 .sb-item:hover{background:var(--sur2);color:var(--text)}
-.sb-item.on{background:rgba(91,110,245,.12);color:var(--acc);font-weight:600}
-.sb-item.on .sb-icon{filter:none}
-.sb-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;opacity:.85;flex-shrink:0}
+.sb-item:hover .sb-icon{transform:scale(1.06)}
+.sb-item.on{color:var(--acc);font-weight:600}
+.sb-item.on .sb-icon{filter:none;opacity:1}
+.sb-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;opacity:.85;flex-shrink:0;transition:transform .25s cubic-bezier(.4,0,.2,1)}
 .sb-icon svg{width:16px;height:16px}
-.sb-item.on .sb-icon{opacity:1}
-.sb-item.on{background:rgba(91,110,245,.12);color:var(--acc);font-weight:600;box-shadow:inset 2px 0 0 var(--acc)}
+
+/* ── Sliding sidebar active-indicator ──
+   A single floating pill that smoothly glides between active items as the
+   user scrolls or clicks. Replaces the static box-shadow so the highlight
+   feels alive without being noisy. JS sets --sbi-top / --sbi-h. */
+.sb-indicator{
+  position:absolute;
+  left:8px;right:8px;
+  top:0;height:0;
+  background:linear-gradient(135deg,rgba(91,110,245,.14),rgba(155,114,245,.14));
+  border-radius:7px;
+  pointer-events:none;
+  z-index:0;
+  opacity:0;
+  transform:translateY(var(--sbi-top,0));
+  transition:transform .42s cubic-bezier(.22,1,.36,1),
+             height   .42s cubic-bezier(.22,1,.36,1),
+             opacity  .25s ease;
+  box-shadow:inset 2px 0 0 var(--acc),0 4px 18px -8px rgba(91,110,245,.45);
+}
+.sb-indicator.ready{opacity:1}
+.sidebar.collapsed .sb-indicator{left:4px;right:4px;border-radius:8px}
 .sb-footer{border-top:0.5px solid var(--bor);padding:10px 12px;display:flex;align-items:center;gap:8px}
 .sb-user{flex:1;display:flex;align-items:center;gap:8px;overflow:hidden}
 .sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
@@ -93,6 +114,11 @@ body{font-family:var(--font-body);font-size:13px;transition:background .3s,color
 
 .main-area{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
 .main-topbar{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:0.5px solid var(--bor);background:var(--sur);position:sticky;top:0;z-index:10;flex-wrap:wrap}
+/* ── Scroll-progress bar ──
+   Sits at the bottom edge of the sticky topbar; fills as the user scrolls
+   through the outliner. 2px tall, gradient, soft glow — premium and subtle. */
+.scroll-progress{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:transparent;pointer-events:none;overflow:hidden}
+.scroll-progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--acc) 0%,var(--pur) 60%,var(--teal) 100%);box-shadow:0 0 10px rgba(91,110,245,.45);transition:width .14s cubic-bezier(.4,0,.2,1);border-radius:0 2px 2px 0}
 .hamburger{background:transparent;border:none;color:var(--mut);cursor:pointer;padding:6px 10px;border-radius:6px;transition:all .12s;display:inline-flex;align-items:center;justify-content:center}
 .hamburger:hover{background:var(--sur2);color:var(--text)}
 .page-title-wrap{flex:1;min-width:150px}
@@ -100,7 +126,16 @@ body{font-family:var(--font-body);font-size:13px;transition:background .3s,color
 .page-sub{font-size:11px;color:var(--mut);margin-top:2px}
 .main-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .sprint-select{background:var(--sur2);color:var(--text);border:0.5px solid var(--bor);border-radius:7px;padding:6px 10px;font-size:11px;cursor:pointer;outline:none;min-width:180px}
-.page-content{flex:1;padding:22px 28px;overflow-y:auto;width:100%;box-sizing:border-box;position:relative}
+.page-content{flex:1;padding:22px 28px;overflow-y:auto;width:100%;box-sizing:border-box;position:relative;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--bor) transparent}
+.page-content::-webkit-scrollbar{width:10px}
+.page-content::-webkit-scrollbar-track{background:transparent}
+.page-content::-webkit-scrollbar-thumb{background:var(--bor);border-radius:10px;border:2px solid var(--bg);transition:background .25s}
+.page-content::-webkit-scrollbar-thumb:hover{background:var(--mut)}
+@media (prefers-reduced-motion: reduce){
+  .page-content{scroll-behavior:auto}
+  .sb-indicator{transition:none}
+  .scroll-progress-fill{transition:none}
+}
 
 /* Hide old wrap class */
 .wrap{max-width:none;padding:0;margin:0}
@@ -661,6 +696,7 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
     </div>
 
     <nav class="sb-nav">
+      <span class="sb-indicator" id="sbIndicator" aria-hidden="true"></span>
       <div class="sb-group">Sprint</div>
       <a class="sb-item on" data-page="overview" data-label="Overview"><span class="sb-icon"><svg viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span><span class="sb-label">Overview</span></a>
       <a class="sb-item" data-page="goals" data-label="Goals"><span class="sb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span><span class="sb-label">Goals</span></a>
@@ -710,6 +746,7 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
         <button class="btn btn-acc" id="syncBtn"><svg class="icn" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>Refresh</button>
         <button class="btn pdf-btn" id="pdfBtn"><svg class="icn" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>PDF</button>
       </div>
+      <div class="scroll-progress" aria-hidden="true"><div class="scroll-progress-fill" id="scrollProgressFill"></div></div>
     </div>
 
     <div class="page-content" id="mc">
@@ -1179,6 +1216,9 @@ function lazyRenderPage(pageId, d){
   var el = document.getElementById('page-' + pageId);
   if(el) el.classList.remove('lazy-pending');
   renderPage(pageId, d);
+  // Section just grew from a placeholder to real content — refresh the
+  // scroll-progress max so the bar stays accurate as the doc gets longer.
+  if(typeof updateScrollProgress === 'function') updateScrollProgress();
 }
 
 // Set up IntersectionObserver so each outliner section auto-renders when it
@@ -1232,6 +1272,7 @@ function switchPage(page){
   document.querySelectorAll('.sb-item').forEach(function(el){
     el.classList.toggle('on', el.dataset.page === page);
   });
+  positionSidebarIndicator();
   // Update title
   document.getElementById('pageTitle').textContent = PAGES[page].title;
   document.getElementById('pageSub').textContent = PAGES[page].sub;
@@ -1346,6 +1387,52 @@ function updateOutlinerActiveSection(){
     document.getElementById('pageTitle').textContent = PAGES[active].title;
     document.getElementById('pageSub').textContent = PAGES[active].sub;
   }
+  positionSidebarIndicator();
+}
+
+// ── Sliding sidebar indicator ──
+// Reads the active .sb-item's geometry and translates the floating .sb-indicator
+// to match. Using transform instead of top/height keeps movement on the GPU.
+function positionSidebarIndicator(){
+  var ind = document.getElementById('sbIndicator');
+  if(!ind) return;
+  var nav = ind.parentElement;
+  if(!nav) return;
+  var active = nav.querySelector('.sb-item.on');
+  if(!active || active.getAttribute('data-hidden') === '1'){
+    ind.classList.remove('ready');
+    return;
+  }
+  var top = active.offsetTop;
+  var h   = active.offsetHeight;
+  ind.style.transform = 'translateY(' + top + 'px)';
+  ind.style.height    = h + 'px';
+  ind.classList.add('ready');
+}
+
+// ── Scroll-progress bar ──
+// Throttled with rAF so it stays buttery during fast scrolls. Updates the
+// width fill based on how far through the page-content the user has scrolled.
+var _scrollRaf = null;
+function updateScrollProgress(){
+  _scrollRaf = null;
+  var pc = document.getElementById('mc');
+  var fill = document.getElementById('scrollProgressFill');
+  if(!pc || !fill) return;
+  var max = pc.scrollHeight - pc.clientHeight;
+  var pct = max > 0 ? Math.min(100, Math.max(0, (pc.scrollTop / max) * 100)) : 0;
+  fill.style.width = pct.toFixed(2) + '%';
+}
+function onContentScroll(){
+  if(_scrollRaf != null) return;
+  _scrollRaf = requestAnimationFrame(updateScrollProgress);
+}
+function bindScrollProgress(){
+  var pc = document.getElementById('mc');
+  if(!pc) return;
+  pc.removeEventListener('scroll', onContentScroll);
+  pc.addEventListener('scroll', onContentScroll, { passive: true });
+  updateScrollProgress();
 }
 
 function renderPage(page, d){
@@ -1388,6 +1475,9 @@ function render(d){
   if(typeof doSubtasks === 'function') doSubtasks(d);
   // Bind outliner scroll-spy now that #mc exists
   initOutlinerScrollSpy();
+  bindScrollProgress();
+  // Position the sliding sidebar indicator after layout settles
+  requestAnimationFrame(positionSidebarIndicator);
   // Activate the right pages based on current mode
   var pc = document.getElementById('mc');
   if(isOutlinerPage(currentPage)){
@@ -3065,14 +3155,21 @@ function renderMemberDetail(a, d){
   var html = '';
 
   // ── Section 1: Parent tasks owned ──
-  var ownedParents = a.tasks.filter(function(t){ return matchesFilter(t.status); });
+  // Include parent if EITHER the parent's own status matches OR any of its
+  // subtasks match. Otherwise nested subtasks under a non-matching parent
+  // would silently disappear from the filtered view.
+  var ownedParents = a.tasks.filter(function(t){
+    if(matchesFilter(t.status)) return true;
+    var subs = subtaskGroups[(t.taskName||'').trim()] || [];
+    return subs.some(function(s){ return matchesFilter(s.status); });
+  });
   if(a.tasks.length){
     html += '<div class="mm-section">'
       + '<div class="mm-section-title">Owned tasks <span class="mm-section-count">'+ownedParents.length+'</span></div>';
     if(!ownedParents.length){
       html += '<div class="mm-empty">No owned tasks match this filter.</div>';
     } else {
-      html += ownedParents.map(function(t){ return renderMmTask(t, subtaskGroups, a.name); }).join('');
+      html += ownedParents.map(function(t){ return renderMmTask(t, subtaskGroups, a.name, matchesFilter); }).join('');
     }
     html += '</div>';
   }
@@ -3108,13 +3205,18 @@ function renderMemberDetail(a, d){
   body.innerHTML = html;
 }
 
-function renderMmTask(t, subtaskGroups, ownerName){
+function renderMmTask(t, subtaskGroups, ownerName, matchesFilter){
   var est = parseFloat(t.estTime)||0;
   var log = parseFloat(t.timeLog)||0;
   var v   = rnd(log - est);
   var st  = (t.status||'').trim() || 'Not Started';
   var isDone = st === 'Done';
   var subs = subtaskGroups[t.taskName] || [];
+  // When a status filter is active, only render the matching subtasks under
+  // this parent — keeps the count/items in sync with the active filter pill.
+  if(typeof matchesFilter === 'function'){
+    subs = subs.filter(function(s){ return matchesFilter(s.status); });
+  }
   var unp  = (typeof isUnplanned === 'function') ? isUnplanned(t) : false;
 
   var varBadge = '';
@@ -3369,7 +3471,17 @@ function toggleSidebar(){
     // Save preference
     localStorage.setItem('sidebarCollapsed', sb.classList.contains('collapsed') ? '1' : '0');
   }
+  // Indicator geometry depends on item width/padding — re-measure after the
+  // collapse transition (CSS transition is .2s; give it a beat to settle).
+  setTimeout(positionSidebarIndicator, 220);
 }
+
+// Re-measure on viewport resize so the indicator stays aligned when the
+// layout reflows (e.g. wrapping topbar pushes content height around).
+window.addEventListener('resize', function(){
+  positionSidebarIndicator();
+  if(typeof updateScrollProgress === 'function') updateScrollProgress();
+});
 
 function setupSidebar(){
   document.querySelectorAll('.sb-item').forEach(function(el){
@@ -3385,20 +3497,33 @@ function updateSyncBar(json){
   var now = new Date();
   var loadEl = document.getElementById('syncLoadTime');
   if(loadEl) loadEl.textContent = now.toLocaleString('en-US', {
+    timeZone:'Asia/Karachi',
     month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:true
-  });
+  }) + ' PKT';
 
-  // Sheet last synced — from json.lastSync
+  // Sheet last synced — from json.lastSync. Apps Script returns an ISO/UTC
+  // string; format it in Pakistan time so the dashboard matches the rest of
+  // the sync schedule (which is also expressed in PKT).
   var sheetEl = document.getElementById('syncSheetTime');
   var hoursAgo = null;
   if(sheetEl){
     var lastSync = json && json.lastSync;
     if(lastSync){
-      sheetEl.textContent = lastSync;
       try {
-        var lastDate = new Date(lastSync.replace(/(\d+)(st|nd|rd|th)/i,'$1'));
-        hoursAgo = (now - lastDate) / 3600000;
-      } catch(e){}
+        var lastDate = new Date(lastSync.toString().replace(/(\d+)(st|nd|rd|th)/i,'$1'));
+        if(!isNaN(lastDate.getTime())){
+          sheetEl.textContent = lastDate.toLocaleString('en-US', {
+            timeZone:'Asia/Karachi',
+            month:'short', day:'numeric',
+            hour:'2-digit', minute:'2-digit', hour12:true
+          }) + ' PKT';
+          hoursAgo = (now - lastDate) / 3600000;
+        } else {
+          sheetEl.textContent = lastSync;
+        }
+      } catch(e){
+        sheetEl.textContent = lastSync;
+      }
     } else {
       sheetEl.textContent = 'Never';
     }
