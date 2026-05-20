@@ -869,21 +869,64 @@ function process(json,spId){
   var carried = json.carriedOver||[];
   var spInfo  = sprints.find(function(s){return s.id===spId;})||{};
 
+  // Carried-over fallback: if Apps Script didn't populate carriedOver (which
+  // is the case more often than not — sheet column is optional), derive it
+  // by looking at the previous sprint's tasks that didn't finish. The "prev"
+  // sprint is the one whose end date is closest to but before this sprint's
+  // start, ignoring BUGS/BACKLOG pseudo-sprints.
+  if(!carried.length && spId){
+    var thisStart = pd(spInfo.start);
+    if(thisStart){
+      var validPrev = sprints.filter(function(s){
+        if(!s.id||!s.start||!s.end) return false;
+        if(s.id===spId) return false;
+        if(s.id.match(/^(BUGS|BACKLOG)$/i)) return false;
+        var sStart = pd(s.start); var sEnd = pd(s.end);
+        return sStart && sEnd && sEnd < thisStart;
+      }).sort(function(a,b){ return pd(b.end) - pd(a.end); }); // newest-ending first
+      var prevSprint = validPrev[0];
+      if(prevSprint){
+        carried = (json.tasks||[]).filter(function(t){
+          return t.sprintId===prevSprint.id && (t.status||'').trim()!=='Done';
+        }).map(function(t){
+          return {
+            taskName: t.taskName,
+            assignee: t.assignee,
+            estTime:  t.estTime,
+            timeLog:  t.timeLog,
+            status:   t.status,
+            teamCategory: t.teamCategory,
+            fromSprint: prevSprint.id
+          };
+        });
+      }
+    }
+  }
+
   // Sprint date range for filtering bugs & backlog
   var spStart = pd(spInfo.start);
   var spEnd   = pd(spInfo.end);
   if(spEnd) spEnd = new Date(spEnd.getTime() + 864e5 - 1);
 
-  // Bugs & backlog filtered by sprint date range (createdOn)
+  // Bugs & polish: filter by ticket type + priority only.
+  //   • Bugs   = ticketType "Bug",      priority ≠ "Deferred"
+  //   • Polish = ticketType "Feedback", priority ≠ "Deferred"
+  // We intentionally do NOT filter by dueDate any more — the team treats the
+  // Bugs section in Asana as a live queue: whatever sits there is "current".
+  // Bugs without a due date were getting silently dropped by the old window
+  // filter, which is why the section came up empty.
+  // Deferred priority is excluded everywhere — those are parked, not in-sprint.
+  function bugTicketType(b){ return ((b.ticketType||b['Ticket Type']||'')+'').trim().toLowerCase(); }
+  function bugPriority(b){   return ((b.priority||b.Priority||'')+'').trim().toLowerCase(); }
   var allBugs = json.bugsTasks||[];
-  var bugs = allBugs.filter(function(b){
-    if(!spStart||!spEnd) return true;
-    var d = pd(b.createdOn); return d && d >= spStart && d <= spEnd;
-  });
+  var bugs   = allBugs.filter(function(b){ return bugTicketType(b)==='bug'      && bugPriority(b)!=='deferred'; });
+  var polish = allBugs.filter(function(b){ return bugTicketType(b)==='feedback' && bugPriority(b)!=='deferred'; });
+  var allBugsByType     = allBugs.filter(function(b){ return bugTicketType(b)==='bug'; });
+  var allPolishByType   = allBugs.filter(function(b){ return bugTicketType(b)==='feedback'; });
   var allBacklog = json.backlogTasks||[];
   var backlog = allBacklog.filter(function(b){
     if(!spStart||!spEnd) return true;
-    var d = pd(b.createdOn); return d && d >= spStart && d <= spEnd;
+    var d = pd(b.dueDate); return d && d >= spStart && d <= spEnd;
   });
 
   var tmap={},amap={};
@@ -1017,26 +1060,37 @@ function process(json,spId){
     // a container, real "done" credit lives on subtasks
   });
 
-  // ── Merge sprint-period bugs into time/effort metrics ──
+  // ── Merge bugs + polish into sprint totals (counts AND time) ──
   //
-  // Bugs created within the sprint date range count as REAL WORK done in
-  // this sprint. We add their est+log to the sprint totals and assignee/team
-  // breakdowns, so individual hours, team effort, burndown, and totals
-  // reflect time actually spent.
+  // Bugs (ticketType=Bug) and Polish (ticketType=Feedback) that belong to
+  // this sprint are real work the team owns. Count them in:
+  //   • totEst / totLog / done / prog / ns / ovd  → sprint KPIs reflect them
+  //   • tmap / amap (tot + done + est + log)      → team & user roster show them
   //
-  // Deliberately NOT added to:
-  //   • allItems / done / prog / ns / ovd  — bug counts stay separate from
-  //     task counts (sprint completion % shouldn't depend on bugs)
-  //   • unplanned[] / scope creep         — only Feature Tag = "Unplanned"
-  //     marks scope creep, never bugs
-  //   • drainers / stars / early          — those are task-level metrics
-  bugs.forEach(function(b){
+  // Still NOT added to:
+  //   • unplanned[] / scope creep — scope creep is "Feature Tag = Unplanned",
+  //     a separate signal from ticket type
+  //   • drainers / stars / early — those are sprint task-level metrics
+  var bugsAndPolish = bugs.concat(polish);
+  var bugPolishCount = bugsAndPolish.length;
+  bugsAndPolish.forEach(function(b){
     var est = parseFloat(b.estTime) || 0;
     var log = parseFloat(b.timeLog) || 0;
-    if(!est && !log) return; // no work logged, skip silently
+    var st  = (b.status||'').trim();
+    var isDone = st==='Done';
+    var isWip  = st==='In Progress' || st==='In Review' || st==='Build Awaiting';
 
     totEst += est;
     totLog += log;
+    if(isDone) done++;
+    else if(isWip) prog++;
+    else ns++;
+    if(!isDone){
+      var ovrd = false;
+      if(b.dueDate){try{if(pd(b.dueDate)<new Date()) ovrd=true;}catch(e){}}
+      if(!ovrd && spEnd && new Date()>spEnd) ovrd = true;
+      if(ovrd) ovd++;
+    }
 
     var team = (b.teamCategory || '').toString();
     if(team){
@@ -1044,14 +1098,24 @@ function process(json,spId){
       if(!tmap[team]) tmap[team] = {n:team, done:0, prog:0, ns:0, ovd:0, est:0, log:0, tot:0};
       tmap[team].est += est;
       tmap[team].log += log;
-      // intentionally NOT incrementing tmap[team].tot — bug count stays separate
+      tmap[team].tot++;
+      if(isDone) tmap[team].done++;
+      else if(isWip) tmap[team].prog++;
+      else tmap[team].ns++;
+      if(!isDone){
+        var tOvrd = false;
+        if(b.dueDate){try{if(pd(b.dueDate)<new Date()) tOvrd=true;}catch(e){}}
+        if(!tOvrd && spEnd && new Date()>spEnd) tOvrd = true;
+        if(tOvrd) tmap[team].ovd++;
+      }
     }
 
     var asn = b.assignee || 'Unassigned';
     if(!amap[asn]) amap[asn] = {n:asn, team:team, tot:0, done:0, est:0, log:0, times:[]};
+    amap[asn].tot++;
     amap[asn].est += est;
     amap[asn].log += log;
-    // intentionally NOT incrementing amap[asn].tot or amap[asn].done
+    if(isDone){ amap[asn].done++; if(log>0) amap[asn].times.push(log); }
   });
 
   drainers.sort(function(a,b){return b.var-a.var;});
@@ -1145,24 +1209,34 @@ function process(json,spId){
     subtaskGroups[p].push(s);
   });
 
-  // Bugs summary — filtered by sprint date range
-  var bugStats={notStarted:0,inProg:0,done:0,reopened:0,total:bugs.length,totalAll:allBugs.length};
-  bugs.forEach(function(b){
-    var st=(b.status||'').trim();
-    if(st==='Done')bugStats.done++;
-    else if(st==='In Progress'||st==='In Review')bugStats.inProg++;
-    else if(st==='Re-opened')bugStats.reopened++;
-    else bugStats.notStarted++;
-  });
+  // Bugs & Polish summary — split by ticket type. Status buckets count
+  // everything that isn't Done/WIP/Re-opened as "notStarted" so the chips
+  // always sum to total even when Asana adds new statuses we don't know.
+  function summarizeBugList(list){
+    var s = {notStarted:0,inProg:0,done:0,reopened:0,total:list.length};
+    list.forEach(function(b){
+      var st=(b.status||'').trim();
+      if(st==='Done') s.done++;
+      else if(st==='In Progress'||st==='In Review') s.inProg++;
+      else if(st==='Re-opened') s.reopened++;
+      else s.notStarted++;
+    });
+    return s;
+  }
+  var bugStats   = summarizeBugList(bugs);   bugStats.totalAll   = allBugsByType.length;
+  var polishStats = summarizeBugList(polish); polishStats.totalAll = allPolishByType.length;
 
+  // Total items now includes bugs + polish — they count as real work in the
+  // sprint, so completion rate and scope creep should weigh them too.
+  var grandTotal = allItems.length + bugPolishCount;
   return{
-    sprints,spInfo,tasks,subtasks,goals,bugs,backlog,carried,
-    total:allItems.length,done,prog,ns,ovd,
+    sprints,spInfo,tasks,subtasks,goals,bugs,polish,backlog,carried,
+    total:grandTotal,done,prog,ns,ovd,
     totEst:rnd(totEst),totLog:rnd(totLog),
-    compRate:pc(done,allItems.length),
+    compRate:pc(done,grandTotal),
     util:pc(totLog,totEst),
     estAcc:totEst>0?Math.min(100,Math.round((1-Math.abs(totEst-totLog)/totEst)*100)):0,
-    creep:pc(unplanned.length,allItems.length),
+    creep:pc(unplanned.length,grandTotal),
     avgComp:cTimes.length?rnd(cTimes.reduce(function(s,v){return s+v;},0)/cTimes.length):0,
     dTot,dDone,startDate:spInfo.start||'',endDate:spInfo.end||'',
     teams:Object.values(tmap),assignees:Object.values(amap),scope,
@@ -1174,8 +1248,10 @@ function process(json,spId){
     unplannedCount:unplanned.length,
     unplannedEst:rnd(unplannedEst),
     plannedEst,healthImpact,
-    subtaskGroups,bugStats,spStart,spEnd,allBugsTotal:allBugs.length,
-    bugsRaw: allBugs,
+    subtaskGroups,
+    bugStats,    allBugsTotal:   allBugsByType.length,    bugsRaw:   allBugsByType,
+    polishStats, allPolishTotal: allPolishByType.length,  polishRaw: allPolishByType,
+    spStart,spEnd,
     sprintGoals: json.sprintGoals||{},
     retrospectives: json.retrospectives||{},
     teamCapacity: json.teamCapacity||{},
@@ -1451,6 +1527,7 @@ function renderPage(page, d){
     doAssigneeTaskDetail(d);
   } else if(page === 'bugs'){
     doBugsBacklog(d);
+    doPolish(d);
   } else if(page === 'spillovers'){
     doSpillovers(d);
   } else if(page === 'retro'){
@@ -1577,6 +1654,8 @@ function shell(){
   /* BUGS */
   +'<div class="page" id="page-bugs" data-section-label="Bugs &amp; Polish">'
   +'<div id="bugsS"></div>'
+  +'<div style="height:22px"></div>'
+  +'<div id="polishS"></div>'
   +'</div>'
 
   /* SPILLOVERS — only carry-over (backlog moved out, subtasks moved to Team) */
@@ -2425,27 +2504,34 @@ function toggleSubRows(pid){
 
 /* ── BUGS & POLISH ── */
 var bugsActiveTab = 'current'; // current | all | byStatus
+var bugsActiveAsn = 'All';     // assignee filter pill
 
 function doBugsBacklog(d){
   var el=document.getElementById('bugsS');
   window._bugsData = d; // store for tab callbacks
   var dateHint = d.startDate && d.endDate ? d.startDate+' \u2013 '+d.endDate : '';
 
-  // Get all bugs and current sprint bugs
-  var allBugs = d.bugsRaw || d.bugs || [];  // fallback
+  // d.bugs    = active Bug-type tickets (Priority ≠ Deferred)
+  // d.bugsRaw = every Bug-type ticket (audit view, includes Deferred)
+  var allBugs = d.bugsRaw || d.bugs || [];
   var currentBugs = d.bugs || [];
-
-  // If bugsRaw not in data, we need to pass it - for now use d.bugs + allBugsTotal
-  // Actually d.bugs is already filtered to current sprint; we need all separately
-  // Pass through: allBugs should be everything - we'll handle this
   if(!d.bugsRaw && d.allBugsTotal > currentBugs.length){
-    // We don't have raw, but we have count - show current for now
     allBugs = currentBugs;
   }
 
   if(!currentBugs.length && !allBugs.length){
     el.innerHTML='<div class="empty">No bugs found. Total in Bugs section: '+(d.allBugsTotal||0)+'</div>';
     return;
+  }
+
+  // Assignee filter pills — built from whichever list the active tab uses
+  function uniqueAssignees(list){
+    var seen = {}; var out = [];
+    list.forEach(function(b){
+      var a = (b.assignee||'Unassigned').trim() || 'Unassigned';
+      if(!seen[a]){ seen[a] = true; out.push(a); }
+    });
+    return out.sort();
   }
 
   // Compute stats for each view
@@ -2477,16 +2563,32 @@ function doBugsBacklog(d){
   if(bugsActiveTab==='current'){
     listToShow = currentBugs;
     stats = curStats;
-    subText = 'Bugs added in this sprint period \u2014 '+dateHint;
+    subText = 'Ticket Type \u00b7 Bug \u00b7 Priority \u2260 Deferred';
   } else if(bugsActiveTab==='all'){
     listToShow = allBugs;
     stats = allStats;
-    subText = 'All bugs in Bugs & Polish section (all time)';
+    subText = 'All Bug-type tickets (includes Deferred)';
   } else {
-    listToShow = currentBugs; // grouped view uses current
+    listToShow = currentBugs; // grouped view uses active queue
     stats = curStats;
-    subText = 'Current sprint bugs grouped by status';
+    subText = 'Active bugs grouped by status';
   }
+
+  // Apply assignee filter and recompute stats from the visible subset
+  var asnList = ['All'].concat(uniqueAssignees(listToShow));
+  if(asnList.indexOf(bugsActiveAsn)===-1) bugsActiveAsn = 'All'; // reset stale pick
+  if(bugsActiveAsn !== 'All'){
+    listToShow = listToShow.filter(function(b){
+      return ((b.assignee||'Unassigned').trim()||'Unassigned') === bugsActiveAsn;
+    });
+    stats = computeStats(listToShow);
+  }
+  var asnFilter = '<div class="tabs" style="margin-bottom:14px;flex-wrap:wrap">'
+    + asnList.map(function(a){
+        return '<div class="tab'+(bugsActiveAsn===a?' on':'')+'" onclick="bugsActiveAsn='
+          + JSON.stringify(a) + ';doBugsBacklog(window._bugsData)" title="Filter by assignee">'+a+'</div>';
+      }).join('')
+    + '</div>';
 
   // KPI cards
   var doneRate = pc(stats.done, stats.total);
@@ -2540,6 +2642,7 @@ function doBugsBacklog(d){
 
   var bugCount = listToShow.length;
   var html = tabs
+    + asnFilter
     + kpis
     + '<div class="cc">'
     + '<div class="bugs-dd-header" onclick="toggleBugsList()" id="bugsDdHeader">'
@@ -2548,7 +2651,7 @@ function doBugsBacklog(d){
     + '<span class="cc-t" style="margin:0">Bugs list</span>'
     + '<span class="bugs-dd-count">'+bugCount+'</span>'
     + '</div>'
-    + '<div class="cc-s" style="margin:0">'+subText+'</div>'
+    + '<div class="cc-s" style="margin:0">'+subText+(bugsActiveAsn==='All'?'':' · '+bugsActiveAsn)+'</div>'
     + '</div>'
     + '<div class="bugs-dd-body" id="bugsDdBody" style="display:none">'
     + '<div class="unplanned-list">'+listHtml+'</div>'
@@ -2560,6 +2663,160 @@ function doBugsBacklog(d){
 function toggleBugsList(){
   var header = document.getElementById('bugsDdHeader');
   var body = document.getElementById('bugsDdBody');
+  if(!header || !body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  header.classList.toggle('open', !isOpen);
+}
+
+/* ── POLISH (Feedback tickets) ──
+   Mirrors doBugsBacklog but for Ticket Type = Feedback. Polish has its own
+   "Current Sprint" filter (in-sprint dueDate, Priority ≠ Deferred) and an
+   "All Time" tab that shows every Feedback-type ticket — including Deferred —
+   so the team can audit the parked backlog. */
+var polishActiveTab = 'current'; // current | all | byStatus
+var polishActiveAsn = 'All';     // assignee filter pill
+
+function doPolish(d){
+  var el=document.getElementById('polishS');
+  if(!el) return;
+  window._polishData = d;
+  var dateHint = d.startDate && d.endDate ? d.startDate+' – '+d.endDate : '';
+
+  var allPolish = d.polishRaw || d.polish || [];
+  var currentPolish = d.polish || [];
+  if(!d.polishRaw && d.allPolishTotal > currentPolish.length){
+    allPolish = currentPolish;
+  }
+
+  if(!currentPolish.length && !allPolish.length){
+    el.innerHTML = '<div class="sec" style="margin:6px 0 10px">Polish (Feedback)</div>'
+      + '<div class="empty">No Feedback tickets found. Total in section: '+(d.allPolishTotal||0)+'</div>';
+    return;
+  }
+
+  function computeStats(list){
+    var s = {notStarted:0, inProg:0, done:0, reopened:0, pause:0, total:list.length};
+    list.forEach(function(b){
+      var st=(b.status||'').trim();
+      if(st==='Done') s.done++;
+      else if(st==='In Progress'||st==='In Review') s.inProg++;
+      else if(st==='Re-opened') s.reopened++;
+      else if(st==='Pause') s.pause++;
+      else s.notStarted++;
+    });
+    return s;
+  }
+  var curStats = computeStats(currentPolish);
+  var allStats = computeStats(allPolish);
+
+  var tabs = '<div class="tabs" style="margin-bottom:14px">'
+    +'<div class="tab'+(polishActiveTab==='current'?' on':'')+'" onclick="polishActiveTab=\'current\';doPolish(window._polishData)">Current Sprint ('+curStats.total+')</div>'
+    +'<div class="tab'+(polishActiveTab==='all'?' on':'')+'" onclick="polishActiveTab=\'all\';doPolish(window._polishData)">All Time ('+d.allPolishTotal+')</div>'
+    +'<div class="tab'+(polishActiveTab==='byStatus'?' on':'')+'" onclick="polishActiveTab=\'byStatus\';doPolish(window._polishData)">By Status</div>'
+    +'</div>';
+
+  var listToShow, stats, subText;
+  if(polishActiveTab==='current'){
+    listToShow = currentPolish; stats = curStats;
+    subText = 'Ticket Type · Feedback · Priority ≠ Deferred';
+  } else if(polishActiveTab==='all'){
+    listToShow = allPolish; stats = allStats;
+    subText = 'All Feedback-type tickets (includes Deferred)';
+  } else {
+    listToShow = currentPolish; stats = curStats;
+    subText = 'Active polish grouped by status';
+  }
+
+  // Assignee filter — pills built from current visible list
+  function uniqueAssigneesP(list){
+    var seen = {}; var out = [];
+    list.forEach(function(b){
+      var a = (b.assignee||'Unassigned').trim() || 'Unassigned';
+      if(!seen[a]){ seen[a] = true; out.push(a); }
+    });
+    return out.sort();
+  }
+  var asnListP = ['All'].concat(uniqueAssigneesP(listToShow));
+  if(asnListP.indexOf(polishActiveAsn)===-1) polishActiveAsn = 'All';
+  if(polishActiveAsn !== 'All'){
+    listToShow = listToShow.filter(function(b){
+      return ((b.assignee||'Unassigned').trim()||'Unassigned') === polishActiveAsn;
+    });
+    stats = computeStats(listToShow);
+  }
+  var asnFilterP = '<div class="tabs" style="margin-bottom:14px;flex-wrap:wrap">'
+    + asnListP.map(function(a){
+        return '<div class="tab'+(polishActiveAsn===a?' on':'')+'" onclick="polishActiveAsn='
+          + JSON.stringify(a) + ';doPolish(window._polishData)" title="Filter by assignee">'+a+'</div>';
+      }).join('')
+    + '</div>';
+
+  var doneRate = pc(stats.done, stats.total);
+  var kpis = '<div class="bug-status-grid">'
+    +'<div class="bug-stat"><div class="bug-val" style="color:var(--text)">'+stats.total+'</div><div class="bug-lbl">Total</div></div>'
+    +'<div class="bug-stat"><div class="bug-val" style="color:var(--grn)">'+stats.done+'</div><div class="bug-lbl">Done ('+doneRate+'%)</div></div>'
+    +'<div class="bug-stat"><div class="bug-val" style="color:var(--amb)">'+stats.inProg+'</div><div class="bug-lbl">In progress</div></div>'
+    +'<div class="bug-stat"><div class="bug-val" style="color:var(--red)">'+stats.reopened+'</div><div class="bug-lbl">Re-opened</div></div>'
+    +'</div>';
+
+  function row(b){
+    var st=(b.status||'').trim();
+    var badgeCls=st==='Done'?'grn':st==='Re-opened'?'red':(st.indexOf('Progress')!==-1||st.indexOf('Review')!==-1)?'acc':'';
+    return '<div class="ul-row"><div class="ul-name">'+trunc(b.taskName,65)
+      +'<br><span style="font-size:10px;color:var(--mut)">'+(b.assignee||'Unassigned')+' · '+(b.mssTicket||'—')+(b.createdOn?' · '+b.createdOn:'')+'</span></div>'
+      +'<div class="ul-meta"><span class="badge '+badgeCls+'">'+st+'</span>'
+      +(b.estTime?'<span class="ul-hrs">'+(b.estTime||0)+' hrs</span>':'')
+      +'</div></div>';
+  }
+
+  var listHtml = '';
+  if(polishActiveTab==='byStatus'){
+    var groups = {};
+    listToShow.forEach(function(b){
+      var st=(b.status||'Not Started').trim()||'Not Started';
+      if(!groups[st]) groups[st]=[];
+      groups[st].push(b);
+    });
+    var statusOrder = ['Re-opened','In Progress','In Review','Not Started','Pause','Done'];
+    statusOrder.forEach(function(st){
+      if(!groups[st]||!groups[st].length) return;
+      var col = st==='Done'?'var(--grn)':st==='Re-opened'?'var(--red)':(st.indexOf('Progress')!==-1||st.indexOf('Review')!==-1)?'var(--acc)':'var(--mut)';
+      listHtml += '<div style="margin-top:14px;font-size:11px;font-weight:600;color:'+col+';text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bor);padding-bottom:6px;margin-bottom:6px">'
+        + st + ' <span style="color:var(--mut);font-weight:400">('+groups[st].length+')</span></div>';
+      listHtml += groups[st].map(row).join('');
+    });
+  } else {
+    var visible = listToShow.slice(0, 20);
+    listHtml = visible.map(row).join('');
+    if(listToShow.length > 20){
+      listHtml += '<div style="text-align:center;font-size:11px;color:var(--mut);padding:10px">Showing 20 of '+listToShow.length+' items</div>';
+    }
+  }
+  if(!listToShow.length) listHtml = '<div class="empty">No polish items in this view.</div>';
+
+  var html = '<div class="sec" style="margin:6px 0 10px">Polish (Feedback)</div>'
+    + tabs
+    + asnFilterP
+    + kpis
+    + '<div class="cc">'
+    + '<div class="bugs-dd-header" onclick="togglePolishList()" id="polishDdHeader">'
+    + '<div class="bugs-dd-title">'
+    + '<span class="bugs-dd-chev">▶</span>'
+    + '<span class="cc-t" style="margin:0">Polish list</span>'
+    + '<span class="bugs-dd-count">'+listToShow.length+'</span>'
+    + '</div>'
+    + '<div class="cc-s" style="margin:0">'+subText+(polishActiveAsn==='All'?'':' · '+polishActiveAsn)+'</div>'
+    + '</div>'
+    + '<div class="bugs-dd-body" id="polishDdBody" style="display:none">'
+    + '<div class="unplanned-list">'+listHtml+'</div>'
+    + '</div></div>';
+  el.innerHTML = html;
+}
+
+function togglePolishList(){
+  var header = document.getElementById('polishDdHeader');
+  var body = document.getElementById('polishDdBody');
   if(!header || !body) return;
   var isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
@@ -2881,10 +3138,14 @@ function buildMemberBuckets(d){
   function bucket(asn, team){
     if(!byAsn[asn]){
       byAsn[asn] = {name:asn, team:team||'', tasks:[], ownedSubs:[], orphanSubs:[],
+                    bugs:[], polish:[],
                     totEst:0, totLog:0, done:0, prog:0, ns:0, total:0};
     } else if(!byAsn[asn].team && team){
       byAsn[asn].team = team;
     }
+    // older buckets may pre-date bugs/polish arrays — patch in for safety
+    if(!byAsn[asn].bugs)   byAsn[asn].bugs   = [];
+    if(!byAsn[asn].polish) byAsn[asn].polish = [];
     return byAsn[asn];
   }
 
@@ -2949,23 +3210,31 @@ function buildMemberBuckets(d){
     // their non-subtask hours
   });
 
-  // ── Merge sprint-period bugs into per-member time totals ──
-  // Same logic as process(): bug fix hours count toward the assignee's
-  // logged/estimated time so roster cards + modal stats stay consistent
-  // with the team/individual charts. Bugs are deliberately NOT added to
-  // the task list, task counts, or done/prog/ns — they're tracked
-  // separately on the Bugs page.
-  var bugs = (d && d.bugs) || [];
-  bugs.forEach(function(b){
-    var est = parseFloat(b.estTime)||0;
-    var log = parseFloat(b.timeLog)||0;
-    if(!est && !log) return;
-    var asn = (b.assignee||'').trim() || 'Unassigned';
-    var bk = bucket(asn, b.teamCategory);
-    bk.totEst += est;
-    bk.totLog += log;
-    // intentionally NOT touching .tasks / .ownedSubs / .total / .done / .prog / .ns
-  });
+  // ── Merge bugs + polish into per-member counts and time ──
+  // Mirrors process(): bugs/polish (in-sprint, priority ≠ Deferred, by ticket
+  // type) are real work the assignee owns, so they go into:
+  //   • .totEst / .totLog   — keeps roster hours matching team charts
+  //   • .total / .done / .prog / .ns — so the card "items" count + done %
+  //     match what the user sees on the Bugs & Polish page
+  //   • .bugs[] / .polish[] — for a dedicated section in the modal
+  function mergeBugLike(list, kind){
+    (list||[]).forEach(function(b){
+      var est = parseFloat(b.estTime)||0;
+      var log = parseFloat(b.timeLog)||0;
+      var asn = (b.assignee||'').trim() || 'Unassigned';
+      var bk = bucket(asn, b.teamCategory);
+      bk.totEst += est;
+      bk.totLog += log;
+      bk.total++;
+      var st = (b.status||'').trim();
+      if(st==='Done') bk.done++;
+      else if(st==='In Progress'||st==='In Review'||st==='Build Awaiting') bk.prog++;
+      else bk.ns++;
+      bk[kind].push(b);
+    });
+  }
+  mergeBugLike((d&&d.bugs)||[],   'bugs');
+  mergeBugLike((d&&d.polish)||[], 'polish');
 
   return byAsn;
 }
@@ -3089,9 +3358,13 @@ function renderMemberDetail(a, d){
   document.getElementById('mmAvatar').textContent = memberInitials(a.name);
   document.getElementById('mmAvatar').style.background = 'linear-gradient(135deg,'+teamCol+',var(--pur))';
   document.getElementById('mmName').textContent = a.name;
+  var nBugs   = (a.bugs   && a.bugs.length)   || 0;
+  var nPolish = (a.polish && a.polish.length) || 0;
   var metaHtml = (a.team ? '<span class="pill" style="background:'+teamCol+'">'+a.team+'</span>' : '')
     + '<span>'+a.tasks.length+' parent task'+(a.tasks.length===1?'':'s')+'</span>'
-    + (a.ownedSubs.length ? '<span>· '+a.ownedSubs.length+' subtask'+(a.ownedSubs.length===1?'':'s')+'</span>' : '');
+    + (a.ownedSubs.length ? '<span>· '+a.ownedSubs.length+' subtask'+(a.ownedSubs.length===1?'':'s')+'</span>' : '')
+    + (nBugs   ? '<span>· '+nBugs+' bug'+(nBugs===1?'':'s')+'</span>' : '')
+    + (nPolish ? '<span>· '+nPolish+' polish</span>' : '');
   document.getElementById('mmMeta').innerHTML = metaHtml;
 
   // Stats grid
@@ -3177,8 +3450,61 @@ function renderMemberDetail(a, d){
     html += '</div>';
   }
 
-  if(!a.tasks.length && !(a.orphanSubs && a.orphanSubs.length)){
-    html = '<div class="mm-empty">No tasks or subtasks for ' + a.name + ' in this sprint.</div>';
+  // ── Section 3: Bugs & Polish owned by this member ──
+  // Same shape as renderMmTask but tagged by ticket type. Counts honor the
+  // active status filter so the visible rows match the filter pill totals.
+  function renderMmBugLike(b, kind){
+    var est = parseFloat(b.estTime)||0;
+    var log = parseFloat(b.timeLog)||0;
+    var v   = rnd(log - est);
+    var st  = (b.status||'').trim() || 'Not Started';
+    var isDone = st === 'Done';
+    var tagColor = kind==='bug' ? 'var(--red)' : 'var(--pur)';
+    var tagLabel = kind==='bug' ? 'BUG' : 'POLISH';
+    var varBadge = '';
+    if(v > 0)      varBadge = '<span class="mm-task-var over">+'+v+'h overtime</span>';
+    else if(v < 0 && log > 0) varBadge = '<span class="mm-task-var under">'+v+'h saved</span>';
+    return '<div class="mm-task" data-status="'+st+'">'
+      + '<div class="mm-task-main">'
+        + '<div class="mm-task-title'+(isDone?' done':'')+'">'+(b.taskName||'(unnamed)')+'</div>'
+        + '<div class="mm-task-meta">'
+          + '<span style="color:'+tagColor+';font-weight:700;letter-spacing:.5px">'+tagLabel+'</span>'
+          + (b.mssTicket ? '<span class="mm-mss">'+b.mssTicket+'</span>' : '')
+          + '<span class="mm-status-badge">'+st+'</span>'
+          + (b.priority ? '<span>'+b.priority+'</span>' : '')
+          + (b.dueDate ? '<span>Due '+b.dueDate+'</span>' : '')
+        + '</div>'
+      + '</div>'
+      + '<div class="mm-task-side">'
+        + '<div class="mm-task-hrs">'+log+'<span class="est">/'+est+'h</span></div>'
+        + varBadge
+      + '</div>'
+      + '</div>';
+  }
+  var ownedBugs   = (a.bugs   || []).filter(function(b){ return matchesFilter(b.status); });
+  var ownedPolish = (a.polish || []).filter(function(b){ return matchesFilter(b.status); });
+  if((a.bugs && a.bugs.length) || (a.polish && a.polish.length)){
+    var bpTotal = ownedBugs.length + ownedPolish.length;
+    html += '<div class="mm-section">'
+      + '<div class="mm-section-title">Bugs &amp; Polish <span class="mm-section-count">'+bpTotal+'</span></div>';
+    if(!bpTotal){
+      html += '<div class="mm-empty">No bugs or polish match this filter.</div>';
+    } else {
+      if(ownedBugs.length){
+        html += '<div class="mm-orphan-head">Bugs (' + ownedBugs.length + ')</div>'
+          + ownedBugs.map(function(b){ return renderMmBugLike(b, 'bug'); }).join('');
+      }
+      if(ownedPolish.length){
+        html += '<div class="mm-orphan-head">Polish (' + ownedPolish.length + ')</div>'
+          + ownedPolish.map(function(b){ return renderMmBugLike(b, 'polish'); }).join('');
+      }
+    }
+    html += '</div>';
+  }
+
+  if(!a.tasks.length && !(a.orphanSubs && a.orphanSubs.length)
+     && !(a.bugs && a.bugs.length) && !(a.polish && a.polish.length)){
+    html = '<div class="mm-empty">No tasks, subtasks, bugs, or polish for ' + a.name + ' in this sprint.</div>';
   }
 
   body.innerHTML = html;
@@ -3624,13 +3950,21 @@ async function triggerManualSync(){
   btn.innerHTML = '<svg class="icn spinning" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3.84-7.39"/></svg>Syncing…';
   try{
     var url = API + '?action=manualSync&email=' + encodeURIComponent(window._userEmail||'') + '&_cb=' + Date.now();
+    console.log('[manualSync] hitting URL:', url);
     var res = await fetch(url, { method:'GET', redirect:'follow' });
     var txt = await res.text();
+    console.log('[manualSync] raw response (first 300 chars):', txt.slice(0, 300));
     var json;
     try { json = JSON.parse(txt.trim()); }
     catch(e){ throw new Error('Invalid response from server'); }
     if(json.error) throw new Error(json.message || json.error);
-    if(!json.ok)   throw new Error('Sync did not complete');
+    if(!json.ok){
+      // Most common cause: Apps Script not redeployed → request fell through
+      // to default dashboard handler. The response will contain "sprints" and
+      // "tasks" keys but no `ok`. Surface this so we know what's wrong.
+      var keys = Object.keys(json).slice(0, 5).join(', ');
+      throw new Error('No ok flag. Response keys: ' + keys + '. Likely: Apps Script not redeployed (Deploy → Manage deployments → ✏️ → New version).');
+    }
     // Sync succeeded — pull fresh data into the dashboard
     btn.innerHTML = '<svg class="icn" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Synced';
     await new Promise(function(r){ setTimeout(r, 600); });
