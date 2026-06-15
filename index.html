@@ -233,7 +233,7 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
 .kpi-l{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
 .kpi-v{font-size:22px;font-weight:600;color:var(--text);line-height:1}
 .kpi-s{font-size:10px;margin-top:5px}
-.g{color:var(--grn)}.r{color:var(--red)}.n{color:var(--mut)}
+.g{color:var(--grn)}.r{color:var(--red)}.n{color:var(--mut)}.a{color:var(--amb)}
 /* sprint progress */
 .sp-card{background:var(--sur);border:0.5px solid var(--bor);border-radius:12px;padding:18px;margin-bottom:14px}
 .sp-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
@@ -681,6 +681,9 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
     <div class="login-title">Sprint Dashboard Access</div>
     <div class="login-sub">Enter your work email to continue.<br>Only whitelisted users can view this dashboard.</div>
     <input type="email" class="login-input" id="loginEmail" placeholder="yourname@playspare.com" autofocus>
+    <!-- Team access key PAUSED — email-only login. To re-enable: remove display:none below,
+         restore the !token check in the loginBtn handler, and re-add user.token in bootstrap(). -->
+    <input type="password" class="login-input" id="loginToken" placeholder="Team access key" autocomplete="current-password" style="margin-top:10px;display:none">
     <button class="login-btn" id="loginBtn">Continue</button>
     <div class="login-err" id="loginErr"></div>
   </div>
@@ -748,6 +751,7 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
         <select id="spSel" class="sprint-select"></select>
         <button class="btn" id="syncBtn" title="Reload dashboard from sheet"><svg class="icn" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>Refresh</button>
         <button class="btn btn-acc" id="syncNowBtn" title="Pull latest data from Asana right now (skips cron schedule)"><svg class="icn" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>Sync Now</button>
+        <button class="btn" id="snapBtn" title="Freeze the selected sprint into a snapshot using the latest Asana data. If it is already frozen, refresh it with the newest numbers (fixes an auto-freeze that fired during a holiday)."><svg class="icn" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Snapshot</button>
         <button class="btn pdf-btn" id="pdfBtn"><svg class="icn" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>PDF</button>
       </div>
       <div class="scroll-progress" aria-hidden="true"><div class="scroll-progress-fill" id="scrollProgressFill"></div></div>
@@ -845,9 +849,15 @@ Chart.defaults.plugins.tooltip.titleColor='#fff';
 Chart.defaults.plugins.tooltip.bodyColor='#dde1f5';
 Chart.defaults.plugins.tooltip.padding=12;
 
+// Shared access-key param appended to EVERY API request. The key itself is
+// never committed — the user types it on the login screen and it lives only
+// in this browser's localStorage. Without it the Apps Script returns
+// "unauthorized", so a public repo / known URL alone can't read the data.
+function tok(){ return '&token=' + encodeURIComponent(window._accessToken || ''); }
+
 function fetchData(){
   var email = encodeURIComponent(window._userEmail || '');
-  return fetch(API+'?email='+email, {method:'GET',redirect:'follow',cache:'no-cache'})
+  return fetch(API+'?email='+email+tok(), {method:'GET',redirect:'follow',cache:'no-cache'})
     .then(function(r){return r.text();})
     .then(function(t){
       var parsed = JSON.parse(t.trim());
@@ -918,7 +928,15 @@ function process(json,spId){
   // Deferred priority is excluded everywhere — those are parked, not in-sprint.
   function bugTicketType(b){ return ((b.ticketType||b['Ticket Type']||'')+'').trim().toLowerCase(); }
   function bugPriority(b){   return ((b.priority||b.Priority||'')+'').trim().toLowerCase(); }
-  var allBugs = json.bugsTasks||[];
+  // ── Bugs are sprint-scoped ──
+  // A FROZEN sprint carries its own snapshotted Bugs & Polish rows (bugs that
+  // were Done within its window), tagged with the sprintId. The CURRENT/live
+  // sprint has no snapshot → show the ongoing live 'BUGS' queue instead.
+  var allBugsRaw = json.bugsTasks||[];
+  var isFrozenSprint = (json.frozenSprintIds||[]).indexOf(spId) !== -1;
+  var allBugs = isFrozenSprint
+    ? allBugsRaw.filter(function(b){ return (b.sprintId||'') === spId; })
+    : allBugsRaw.filter(function(b){ var s=(b.sprintId||''); return s==='BUGS' || s===''; });
   var bugs   = allBugs.filter(function(b){ return bugTicketType(b)==='bug'      && bugPriority(b)!=='deferred'; });
   var polish = allBugs.filter(function(b){ return bugTicketType(b)==='feedback' && bugPriority(b)!=='deferred'; });
   var allBugsByType     = allBugs.filter(function(b){ return bugTicketType(b)==='bug'; });
@@ -1698,7 +1716,11 @@ function doKPIs(d){
     {c:'blue', l:'Completion rate',  v:d.compRate+'%', s:d.compRate>=85?'Healthy sprint':'Below 85% target',    sc:d.compRate>=85?'g':'r'},
     {c:'green',l:'Time utilization', v:d.util+'%',     s:d.util>=80?'Above 80% target':'Below minimum',         sc:d.util>=80?'g':'r'},
     {c:'amber',l:'Est. accuracy',    v:d.estAcc+'%',   s:d.estAcc>=85?'Estimation on track':'Needs work',       sc:d.estAcc>=85?'g':'r'},
-    {c:'red',  l:'Scope creep',      v:d.creep+'%',    s:d.creep>30?'High — review planning':'Under control',   sc:d.creep>30?'r':'g'},
+    // Scope creep — 3 bands: <8% green "Under control", 8–12% amber "Watch/Risk",
+    // 13%+ red "High". creep = unplanned tasks ÷ total tasks (count).
+    {c:d.creep>=13?'red':(d.creep>=8?'amber':'green'), l:'Scope creep', v:d.creep+'%',
+     s:d.creep>=13?'High — review planning':(d.creep>=8?'Watch — trending up':'Under control'),
+     sc:d.creep>=13?'r':(d.creep>=8?'a':'g')},
     {c:'teal', l:'Avg completion',   v:d.avgComp?d.avgComp+' hrs':'—', s:'Per completed task',                  sc:'n'},
   ];
   var r2=[
@@ -1922,7 +1944,7 @@ async function saveSprintGoal(sid){
 
   // Save to Google Sheet
   try{
-    var params='?action=saveSprintGoal&sprintId='+encodeURIComponent(sid)+'&text='+encodeURIComponent(text)+'&email='+encodeURIComponent(window._userEmail||'')+'&_cb='+Date.now();
+    var params='?action=saveSprintGoal&sprintId='+encodeURIComponent(sid)+'&text='+encodeURIComponent(text)+'&email='+encodeURIComponent(window._userEmail||'')+tok()+'&_cb='+Date.now();
     var res=await fetch(API+params,{method:'GET',redirect:'follow'});
     var json=await res.json();
     if(json&&!json.error){
@@ -1936,7 +1958,7 @@ async function saveSprintGoal(sid){
 async function deleteSprintGoal(sid){
   localStorage.removeItem('sg_'+sid);
   try{
-    await fetch(API+'?action=saveSprintGoal&sprintId='+encodeURIComponent(sid)+'&text=&email='+encodeURIComponent(window._userEmail||'')+'&_cb='+Date.now(),{redirect:'follow'});
+    await fetch(API+'?action=saveSprintGoal&sprintId='+encodeURIComponent(sid)+'&text=&email='+encodeURIComponent(window._userEmail||'')+tok()+'&_cb='+Date.now(),{redirect:'follow'});
   }catch(e){}
   renderSprintGoal(sid,document.getElementById('sprintGoalBox'));
 }
@@ -2869,7 +2891,7 @@ function saveRetroData(data){
 async function syncRetroToSheet(sid, data){
   try {
     var payload = encodeURIComponent(JSON.stringify(data));
-    var url = API + '?action=saveRetro&sprintId=' + encodeURIComponent(sid) + '&data=' + payload + '&email=' + encodeURIComponent(window._userEmail||'') + '&_cb=' + Date.now();
+    var url = API + '?action=saveRetro&sprintId=' + encodeURIComponent(sid) + '&data=' + payload + '&email=' + encodeURIComponent(window._userEmail||'') + tok() + '&_cb=' + Date.now();
     var res = await fetch(url, {method:'GET', redirect:'follow'});
     var json = await res.json();
     if(json && !json.error){
@@ -3610,7 +3632,7 @@ async function doUsersPage(d){
   }
   el.innerHTML = '<div class="loading"><div class="spin"></div><p>Loading users...</p></div>';
   try {
-    var url = API + '?action=listUsers&email=' + encodeURIComponent(window._userEmail) + '&_cb=' + Date.now();
+    var url = API + '?action=listUsers&email=' + encodeURIComponent(window._userEmail) + tok() + '&_cb=' + Date.now();
     var res = await fetch(url, {method:'GET', redirect:'follow'});
     var txt = await res.text();
     var json = JSON.parse(txt.trim());
@@ -3673,7 +3695,7 @@ async function addUser(){
     var params = '?action=saveUser&email=' + encodeURIComponent(window._userEmail)
       + '&targetName=' + encodeURIComponent(name) + '&targetEmail=' + encodeURIComponent(email)
       + '&targetRole=' + encodeURIComponent(role) + '&targetTeam=' + encodeURIComponent(team)
-      + '&targetHours=' + encodeURIComponent(hours) + '&_cb=' + Date.now();
+      + '&targetHours=' + encodeURIComponent(hours) + tok() + '&_cb=' + Date.now();
     var res = await fetch(API + params, {method:'GET', redirect:'follow'});
     var json = JSON.parse((await res.text()).trim());
     if(json.ok){
@@ -3698,7 +3720,7 @@ async function saveUserRow(btn){
     var params = '?action=saveUser&email=' + encodeURIComponent(window._userEmail)
       + '&targetName=' + encodeURIComponent(name) + '&targetEmail=' + encodeURIComponent(email)
       + '&targetRole=' + encodeURIComponent(role) + '&targetTeam=' + encodeURIComponent(team)
-      + '&targetHours=' + encodeURIComponent(hours) + '&_cb=' + Date.now();
+      + '&targetHours=' + encodeURIComponent(hours) + tok() + '&_cb=' + Date.now();
     var res = await fetch(API + params, {method:'GET', redirect:'follow'});
     var json = JSON.parse((await res.text()).trim());
     btn.textContent = json.ok ? 'Saved ✓' : 'Failed';
@@ -3711,7 +3733,7 @@ async function deleteUserRow(email){
   if(!confirm('Remove user ' + email + '?')) return;
   try {
     var params = '?action=deleteUser&email=' + encodeURIComponent(window._userEmail)
-      + '&targetEmail=' + encodeURIComponent(email) + '&_cb=' + Date.now();
+      + '&targetEmail=' + encodeURIComponent(email) + tok() + '&_cb=' + Date.now();
     var res = await fetch(API + params, {method:'GET', redirect:'follow'});
     var json = JSON.parse((await res.text()).trim());
     if(json.ok) doUsersPage(window._sprintData);
@@ -3949,7 +3971,7 @@ async function triggerManualSync(){
   btn.disabled = true;
   btn.innerHTML = '<svg class="icn spinning" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3.84-7.39"/></svg>Syncing…';
   try{
-    var url = API + '?action=manualSync&email=' + encodeURIComponent(window._userEmail||'') + '&_cb=' + Date.now();
+    var url = API + '?action=manualSync&email=' + encodeURIComponent(window._userEmail||'') + tok() + '&_cb=' + Date.now();
     console.log('[manualSync] hitting URL:', url);
     var res = await fetch(url, { method:'GET', redirect:'follow' });
     var txt = await res.text();
@@ -3978,6 +4000,53 @@ async function triggerManualSync(){
   }
 }
 document.getElementById('syncNowBtn').addEventListener('click', triggerManualSync);
+
+// ── Snapshot / Re-snapshot button ──
+// Freezes the currently-selected sprint into "Sprint Snapshots" using the
+// latest Asana data. If the sprint is already frozen it REFRESHES it — handy
+// when the automatic Monday-freeze fired during a holiday, before the team
+// finished logging time, so the snapshot is missing that work.
+// Server side: action=snapshotSprint → manualSnapshotSprint() in Code.gs.
+async function triggerSnapshot(){
+  var btn = document.getElementById('snapBtn');
+  if(!btn || btn.disabled) return;
+  if(!cur){ alert('No sprint selected.'); return; }
+  if(!confirm('Snapshot sprint "'+cur+'"?\n\n'+
+              'This freezes its data using the latest Asana numbers. '+
+              'If it is already snapshotted, it will be refreshed with the newest data.\n\n'+
+              'Note: a frozen sprint stops receiving live updates from future syncs.')) return;
+  var origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="icn spinning" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3.84-7.39"/></svg>Snapshotting…';
+  try{
+    var url = API + '?action=snapshotSprint&sprintId=' + encodeURIComponent(cur) +
+              '&email=' + encodeURIComponent(window._userEmail||'') + tok() + '&_cb=' + Date.now();
+    console.log('[snapshot] hitting URL:', url);
+    var res = await fetch(url, { method:'GET', redirect:'follow' });
+    var txt = await res.text();
+    console.log('[snapshot] raw response (first 300 chars):', txt.slice(0, 300));
+    var json;
+    try { json = JSON.parse(txt.trim()); }
+    catch(e){ throw new Error('Invalid response from server'); }
+    if(json.error) throw new Error(json.message || json.error);
+    if(!json.ok){
+      var keys = Object.keys(json).slice(0, 5).join(', ');
+      throw new Error('No ok flag. Response keys: ' + keys + '. Likely: Apps Script not redeployed (Deploy → Manage deployments → ✏️ → New version).');
+    }
+    btn.innerHTML = '<svg class="icn" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'+(json.refreshed?'Refreshed':(json.kept?'Kept':'Snapshotted'));
+    if(json.message){ console.log('[snapshot]', json.message); }
+    if(json.kept){ alert(json.message); } // Asana had no live data — old snapshot kept
+    await new Promise(function(r){ setTimeout(r, 700); });
+    init(); // re-fetch so the (re)snapshot is what we now display
+  } catch(err){
+    btn.innerHTML = '<svg class="icn" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Failed';
+    console.error('[snapshot]', err);
+    alert('Snapshot failed: ' + err.message);
+  } finally {
+    setTimeout(function(){ btn.innerHTML = origHTML; btn.disabled = false; }, 1800);
+  }
+}
+document.getElementById('snapBtn').addEventListener('click', triggerSnapshot);
 
 // ── AUTH FLOW ──
 function showLoginScreen(){
@@ -4020,20 +4089,27 @@ function logoutUser(){
   showLoginScreen();
 }
 
-async function tryLogin(email){
+async function tryLogin(email, token){
   var btn=document.getElementById('loginBtn');
   var errEl=document.getElementById('loginErr');
   errEl.classList.remove('show');
   btn.disabled=true; btn.textContent='Checking...';
 
+  // Set the token first so checkAccess (which also requires it) goes through.
+  window._accessToken = token;
+
   try {
-    var url = API + '?action=checkAccess&email=' + encodeURIComponent(email);
+    var url = API + '?action=checkAccess&email=' + encodeURIComponent(email) + tok();
     var res = await fetch(url, {method:'GET', redirect:'follow'});
     var txt = await res.text();
     var json = JSON.parse(txt.trim());
-    if(json.allowed){
+    if(json.error === 'unauthorized'){
+      window._accessToken = null;
+      errEl.textContent = 'Invalid access key. Please check the team key and try again.';
+      errEl.classList.add('show');
+    } else if(json.allowed){
       localStorage.setItem('dashUser', JSON.stringify({
-        email: email, name: json.name, role: json.role, ts: Date.now()
+        email: email, name: json.name, role: json.role, token: token, ts: Date.now()
       }));
       window._userEmail = email;
       window._userName = json.name;
@@ -4054,19 +4130,23 @@ async function tryLogin(email){
 // Login button
 document.getElementById('loginBtn').addEventListener('click', function(){
   var email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  var token = document.getElementById('loginToken').value.trim();
+  var errEl=document.getElementById('loginErr');
   if(!email || email.indexOf('@') === -1){
-    var errEl=document.getElementById('loginErr');
     errEl.textContent='Please enter a valid email address.';
     errEl.classList.add('show');
     return;
   }
-  tryLogin(email);
+  // Team access key paused — email-only login (token stays '' and is ignored).
+  tryLogin(email, token);
 });
-// Enter key to submit
-document.getElementById('loginEmail').addEventListener('keydown', function(e){
-  if(e.key === 'Enter'){
-    document.getElementById('loginBtn').click();
-  }
+// Enter key to submit (from either field)
+['loginEmail','loginToken'].forEach(function(id){
+  document.getElementById(id).addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      document.getElementById('loginBtn').click();
+    }
+  });
 });
 
 // ── PDF EXPORT ──
@@ -4207,11 +4287,12 @@ document.getElementById('pdfBtn').addEventListener('click', openPdfModal);
   if(stored){
     try {
       var user = JSON.parse(stored);
-      // Session valid for 7 days
+      // Session valid for 7 days. Access key paused → email-only, no token required.
       if(user && user.email && (Date.now() - user.ts < 7*24*60*60*1000)){
         window._userEmail = user.email;
         window._userName = user.name;
         window._userRole = user.role;
+        window._accessToken = user.token;
         showDashboard(user.name);
         return;
       }
