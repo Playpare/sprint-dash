@@ -920,7 +920,7 @@ function process(json,spId){
 
   // Bugs & polish: filter by ticket type + priority only.
   //   • Bugs   = ticketType "Bug",      priority ≠ "Deferred"
-  //   • Polish = ticketType "Feedback", priority ≠ "Deferred"
+  //   • Polish = ticketType "Polish", priority ≠ "Deferred"
   // We intentionally do NOT filter by dueDate any more — the team treats the
   // Bugs section in Asana as a live queue: whatever sits there is "current".
   // Bugs without a due date were getting silently dropped by the old window
@@ -938,9 +938,9 @@ function process(json,spId){
     ? allBugsRaw.filter(function(b){ return (b.sprintId||'') === spId; })
     : allBugsRaw.filter(function(b){ var s=(b.sprintId||''); return s==='BUGS' || s===''; });
   var bugs   = allBugs.filter(function(b){ return bugTicketType(b)==='bug'      && bugPriority(b)!=='deferred'; });
-  var polish = allBugs.filter(function(b){ return bugTicketType(b)==='feedback' && bugPriority(b)!=='deferred'; });
+  var polish = allBugs.filter(function(b){ return bugTicketType(b)==='polish' && bugPriority(b)!=='deferred'; });
   var allBugsByType     = allBugs.filter(function(b){ return bugTicketType(b)==='bug'; });
-  var allPolishByType   = allBugs.filter(function(b){ return bugTicketType(b)==='feedback'; });
+  var allPolishByType   = allBugs.filter(function(b){ return bugTicketType(b)==='polish'; });
   var allBacklog = json.backlogTasks||[];
   var backlog = allBacklog.filter(function(b){
     if(!spStart||!spEnd) return true;
