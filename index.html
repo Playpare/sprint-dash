@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Quicksand:wght@600;700&family=Poppins:wght@500;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -36,7 +36,7 @@ body{font-family:var(--font-body);font-size:13px;transition:background .3s,color
 
 /* ── SIDEBAR LAYOUT ── */
 .app-shell{display:flex;min-height:100vh;background:var(--bg)}
-.sidebar{width:240px;background:var(--sur);border-right:0.5px solid var(--bor);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;transition:width .2s ease;overflow-x:hidden}
+.sidebar{width:187px;background:#08090d;border-right:1px solid var(--bor);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;transition:width .2s ease;overflow-x:hidden}
 .sidebar.collapsed{width:56px}
 .sidebar.collapsed .sb-brand,
 .sidebar.collapsed .sb-group,
@@ -64,11 +64,12 @@ body{font-family:var(--font-body);font-size:13px;transition:background .3s,color
   pointer-events:none;
 }
 .sb-header{padding:18px 16px;border-bottom:0.5px solid var(--bor);display:flex;align-items:center;gap:10px}
-.sb-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0;box-shadow:0 4px 14px rgba(91,110,245,.35),inset 0 1px 0 rgba(255,255,255,.12)}
+.sb-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#00E5C3 0%,#4D9FFF 100%);display:flex;align-items:center;justify-content:center;color:#001014;font-weight:700;font-size:14px;flex-shrink:0;box-shadow:0 4px 14px rgba(0,229,195,.28),inset 0 1px 0 rgba(255,255,255,.14)}
+.sb-logo svg{width:18px;height:18px;stroke:#001014;fill:none;stroke-width:2}
 .sb-brand{overflow:hidden}
-.sb-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}
+.sb-title{font-family:'Quicksand',sans-serif;font-size:17px;font-weight:700;color:#fff;line-height:1.1}
 .sb-sub{font-size:10px;color:var(--mut);margin-top:2px}
-.sb-nav{flex:1;padding:14px 8px;overflow-y:auto;position:relative}
+.sb-nav{flex:1;padding:14px 8px;overflow-y:auto;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
 .sb-group{font-size:9px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;padding:10px 10px 6px;margin-top:6px}
 .sb-group:first-child{margin-top:0}
 .sb-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;font-size:12px;color:var(--mut);cursor:pointer;transition:color .25s cubic-bezier(.4,0,.2,1),background-color .25s cubic-bezier(.4,0,.2,1),transform .25s cubic-bezier(.4,0,.2,1);margin-bottom:2px;text-decoration:none;font-weight:500;position:relative;z-index:1}
@@ -102,7 +103,7 @@ body{font-family:var(--font-body);font-size:13px;transition:background .3s,color
 .sidebar.collapsed .sb-indicator{left:4px;right:4px;border-radius:8px}
 .sb-footer{border-top:0.5px solid var(--bor);padding:10px 12px;display:flex;align-items:center;gap:8px}
 .sb-user{flex:1;display:flex;align-items:center;gap:8px;overflow:hidden}
-.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--pur);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
 .sb-user-info{overflow:hidden}
 .sb-user-name{font-size:11px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-user-role{font-size:9px;color:var(--mut);margin-top:1px}
@@ -189,7 +190,8 @@ body{font-family:var(--font-body);font-size:13px;transition:background .3s,color
   .main-area{width:100%}
 }
 
-.d{--bg:#0c0e14;--sur:#151820;--sur2:#1c1f2e;--bor:#262a3d;--text:#dde1f5;--mut:#606888;--acc:#5b6ef5;--grn:#18c97a;--red:#f05252;--amb:#f5a623;--pur:#9b72f5;--teal:#22c4c4;background:var(--bg);color:var(--text);min-height:100vh}
+/* Dark theme = demo palette: near-black surfaces, soft white borders, demo accents */
+.d{--bg:#08090d;--sur:#0b0c0f;--sur2:#1c1f2e;--bor:rgba(255,255,255,.08);--text:#dde1f5;--mut:#606888;--acc:#4d9fff;--grn:#18c97a;--red:#f05252;--amb:#f5a623;--pur:#9b72f5;--teal:#00e5c3;background:var(--bg);color:var(--text);min-height:100vh}
 .d.light{--bg:#f0f2f9;--sur:#ffffff;--sur2:#e8ebf5;--bor:#d4d8ed;--text:#1a1d2e;--mut:#7278a0;--acc:#4050e8;--grn:#0aaa62;--red:#d93535;--amb:#c47e0a;--pur:#7c3aed;--teal:#0e9f9f}
 .wrap{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
 /* topbar */
@@ -669,6 +671,139 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
   .bug-status-grid{grid-template-columns:repeat(2,1fr)}
   .perf-tbl th:nth-child(5),.perf-tbl td:nth-child(5){display:none}
 }
+/* ============================================================
+   NEW OVERVIEW HERO — demo design (namespaced .nv-* to avoid
+   collisions with the existing pages we keep). Uses the same
+   theme tokens (var(--acc) etc.) so dark/light both work.
+   ============================================================ */
+.nv-ov-top{display:grid;grid-template-columns:2fr 2fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:1300px){.nv-ov-top{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.nv-ov-top{grid-template-columns:1fr}}
+.nv-card{background:var(--sur);border:1px solid var(--bor);border-radius:12px;position:relative}
+.nv-ov-card{height:260px;padding:0;overflow:hidden}
+.nv-hd{position:absolute;top:16px;left:17px;right:17px;display:flex;align-items:center;justify-content:space-between;gap:8px;z-index:2}
+.nv-card-t{font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--text);letter-spacing:-.01em}
+.nv-pill{font-family:var(--font-body);font-weight:600;font-size:11px;padding:5px 10px;border-radius:20px;display:inline-flex;align-items:center;white-space:nowrap}
+.nv-pill.good{background:rgba(24,201,122,.15);border:1px solid rgba(24,201,122,.3);color:var(--grn)}
+.nv-pill.warn{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);color:var(--amb)}
+.nv-pill.bad{background:rgba(240,82,82,.15);border:1px solid rgba(240,82,82,.3);color:var(--red)}
+/* donut */
+.nv-donut{position:absolute;top:46px;left:50%;transform:translateX(-50%);width:168px;height:168px}
+.nv-donut canvas{width:168px!important;height:168px!important}
+.nv-donut.sm{top:50px;width:138px;height:138px}
+.nv-donut.sm canvas{width:138px!important;height:138px!important}
+.nv-donut-c{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--text);pointer-events:none}
+.nv-chips{position:absolute;bottom:16px;left:0;right:0;display:flex;justify-content:center;gap:9px;flex-wrap:wrap;padding:0 12px}
+.nv-chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:500;color:var(--mut)}
+.nv-chip .n{font-family:var(--font-mono);font-weight:700;font-size:10px;color:#0a0b0e;min-width:16px;height:15px;padding:0 4px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center}
+/* status grid */
+.nv-status{position:absolute;top:54px;left:17px;right:17px;display:grid;grid-template-columns:1fr 1fr 1fr;row-gap:22px;column-gap:10px}
+.nv-sg .l{font-size:10px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut);margin-bottom:7px}
+.nv-sg .v{font-family:var(--font-mono);font-weight:700;font-size:19px;line-height:1;margin-bottom:5px}
+.nv-sg .s{font-size:10px;color:var(--mut)}
+.nv-sg .v.blue{color:var(--acc)}.nv-sg .v.green{color:var(--grn)}.nv-sg .v.amber{color:var(--amb)}.nv-sg .v.coral{color:var(--red)}
+/* missing hours */
+.nv-mh-total{position:absolute;top:15px;right:17px;font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--red);z-index:2}
+.nv-mh-list{position:absolute;top:48px;left:0;right:0;bottom:42px}
+.nv-mh{position:absolute;left:18px;right:18px;height:30px}
+.nv-mh .top{display:flex;justify-content:space-between;align-items:baseline}
+.nv-mh .nm{font-size:12px;color:var(--text)}
+.nv-mh .vl{font-family:var(--font-mono);font-weight:700;font-size:10px;color:var(--red)}
+.nv-mh .bar{position:absolute;top:21px;left:0;right:0;height:5px;background:var(--sur2);border-radius:3px;overflow:hidden;display:flex}
+.nv-mh .bar i{height:100%;display:block}
+.nv-mh-foot{position:absolute;bottom:16px;left:0;right:0;display:flex;justify-content:center}
+.nv-mh-empty{position:absolute;top:54%;left:0;right:0;transform:translateY(-50%);text-align:center;font-size:11px;color:var(--mut);padding:0 16px}
+/* info row (burndown + sprint progress) */
+.nv-ov-info{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;align-items:start}
+@media(max-width:1100px){.nv-ov-info{grid-template-columns:1fr}}
+.nv-goal{margin-top:12px}
+/* top tab row (demo design) */
+.nv-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;padding:18px 28px 2px}
+.nv-tab{display:flex;align-items:center;justify-content:center;gap:8px;height:38px;background:var(--sur);border:1px solid var(--bor);border-radius:9px;font-size:13px;font-weight:500;color:var(--mut);cursor:pointer;transition:.15s;font-family:var(--font-body);user-select:none}
+.nv-tab svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+.nv-tab:hover{color:var(--text);border-color:var(--mut)}
+.nv-tab.on{background:linear-gradient(135deg,#00E5C3 0%,#4D9FFF 100%);color:#001014;border-color:transparent;font-weight:700}
+.nv-tab.on svg{stroke:#001014}
+@media(max-width:760px){.nv-tabs{grid-template-columns:1fr;padding:14px 16px 2px}}
+/* ── TEAM page (demo design) ── */
+.nv-team-card{padding:17px}
+.nv-team-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nv-team-sub{font-size:10px;color:var(--mut);margin:6px 0 12px}
+.nv-filter-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.nv-fpill{border:1px solid var(--bor);border-radius:20px;padding:6px 15px;font-size:11px;color:var(--mut);cursor:pointer;background:transparent;transition:.15s;font-family:var(--font-body)}
+.nv-fpill:hover{color:var(--text)}
+.nv-fpill.on{background:var(--pur);border-color:var(--pur);color:#fff}
+.nv-team-leg{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.nv-team-leg .i{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--mut)}
+.nv-team-leg .sq{width:8px;height:8px;border-radius:2px}
+.nv-indv-chart{position:relative;min-height:150px}
+.nv-team-bottom{display:grid;grid-template-columns:3fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:900px){.nv-team-bottom{grid-template-columns:1fr}}
+.nv-sc-card{padding:17px}
+.nv-sc-rows{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.nv-sc-row{display:flex;align-items:center;gap:10px}
+.nv-sc-name{width:84px;text-align:right;font-family:var(--font-display);font-weight:700;font-size:10px;color:var(--text);flex-shrink:0}
+.nv-sc-track{flex:1;height:20px;background:var(--sur2);border-radius:4px;overflow:hidden;display:flex}
+.nv-sc-track i{height:100%;opacity:.85}
+.nv-sc-pct{width:88px;text-align:right;font-size:10px;color:var(--mut);flex-shrink:0}
+.nv-stat-tiles{display:flex;flex-direction:column;gap:10px}
+.nv-stat-tile{background:var(--sur);border:1px solid var(--bor);border-radius:10px;min-height:50px;display:flex;align-items:center;padding:10px 16px;gap:12px}
+.nv-stat-tile .num{font-family:var(--font-mono);font-weight:700;font-size:20px;flex-shrink:0;min-width:64px;text-align:center}
+.nv-stat-tile .lab{font-size:10px;color:var(--mut)}
+.nv-unplanned-bar{margin-top:12px;background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nv-ub-left{display:flex;align-items:center;gap:10px}
+.nv-ub-title{font-family:var(--font-display);font-weight:700;font-size:12px;color:var(--text)}
+.nv-ub-badge{background:rgba(155,114,245,.15);color:var(--pur);font-weight:700;font-size:10px;letter-spacing:.3px;padding:2px 8px;border-radius:20px}
+.nv-ub-meta{font-size:10px;color:var(--mut)}
+/* ── Sprint progress (demo design) ── */
+.nv-pg-card{padding:17px}
+.nv-pg-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.nv-pg-title{font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--text)}
+.nv-pg-badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.nv-pg-line{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:14px}
+.nv-pg-dates{font-size:11px;color:var(--mut)}
+.nv-pg-pct{font-size:11px;font-weight:500;color:var(--text)}
+.nv-pg-track{height:10px;background:var(--sur2);border-radius:3px;overflow:hidden;margin:8px 0 6px}
+.nv-pg-track i{display:block;height:100%;background:var(--acc);transition:width .4s}
+.nv-pg-hint{font-size:10px;color:var(--mut);text-align:right}
+.nv-pg-days{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 16px}
+.nv-day{width:36px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-style:italic;font-weight:500;background:var(--sur2);color:var(--mut)}
+.nv-day.past{border:1px dashed var(--bor)}
+.nv-day.now{background:var(--acc);color:#fff;font-style:normal;font-weight:700;font-size:12px}
+.nv-day.future{color:rgba(255,255,255,.35);font-style:normal}
+.nv-pg-depts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.nv-pg-depts{grid-template-columns:1fr}}
+.nv-dept{background:var(--sur2);border:1px solid var(--bor);border-radius:10px;padding:14px 12px;cursor:pointer;transition:border-color .15s,transform .15s}
+.nv-dept:hover{border-color:var(--acc);transform:translateY(-1px)}
+.nv-dept .top{display:flex;justify-content:space-between;align-items:baseline}
+.nv-dept .nm{font-size:12px;color:var(--text);font-weight:500}
+.nv-dept .pc{font-family:var(--font-mono);font-weight:700;font-size:13px}
+.nv-dept .tr{height:5px;background:var(--bor);border-radius:3px;overflow:hidden;margin-top:8px}
+.nv-dept .tr i{display:block;height:100%;border-radius:3px}
+.nv-dept .mt{font-size:9px;color:var(--mut);margin-top:9px}
+/* ── Reusable detail modal (clickable charts) ── */
+.nv-detail-modal{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+.nv-detail-modal.open{display:flex}
+.nv-detail-card{background:var(--sur);border:1px solid var(--bor);border-radius:14px;width:100%;max-width:560px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.nv-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--bor)}
+.nv-detail-title{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--text)}
+.nv-detail-sub{font-size:11px;color:var(--mut);margin-top:3px}
+.nv-detail-close{background:transparent;border:1px solid var(--bor);color:var(--mut);width:30px;height:30px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nv-detail-close:hover{color:var(--text);border-color:var(--mut)}
+.nv-detail-close svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}
+.nv-detail-body{overflow-y:auto;padding:6px 20px 18px}
+.nv-dt-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--bor)}
+.nv-dt-row:last-child{border-bottom:none}
+.nv-dt-main{min-width:0}
+.nv-dt-name{font-size:12px;color:var(--text);font-weight:500;word-break:break-word}
+.nv-dt-sub{font-size:10px;color:var(--mut);margin-top:2px}
+.nv-dt-meta{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.nv-dt-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.nv-dt-badge.g{background:rgba(24,201,122,.15);color:var(--grn)}
+.nv-dt-badge.b{background:rgba(77,159,255,.15);color:var(--acc)}
+.nv-dt-badge.m{background:rgba(96,104,136,.18);color:var(--mut)}
+.nv-dt-hrs{font-family:var(--font-mono);font-size:10px;color:var(--mut);white-space:nowrap}
+.nv-dt-empty{padding:26px;text-align:center;color:var(--mut);font-size:12px}
 </style>
 </head>
 <body>
@@ -694,7 +829,7 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sb-header">
-      <div class="sb-logo">PS</div>
+      <div class="sb-logo"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></div>
       <div class="sb-brand">
         <div class="sb-title">Playspare</div>
         <div class="sb-sub">Sprint Dashboard</div>
@@ -703,14 +838,8 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
 
     <nav class="sb-nav">
       <span class="sb-indicator" id="sbIndicator" aria-hidden="true"></span>
-      <div class="sb-group">Sprint</div>
-      <a class="sb-item on" data-page="overview" data-label="Overview"><span class="sb-icon"><svg viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span><span class="sb-label">Overview</span></a>
-      <a class="sb-item" data-page="goals" data-label="Goals"><span class="sb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span><span class="sb-label">Goals</span></a>
-      <a class="sb-item" data-page="burndown" data-label="Burndown"><span class="sb-icon"><svg viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></span><span class="sb-label">Burndown</span></a>
-      <a class="sb-item" data-page="team" data-label="Team"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="sb-label">Team</span></a>
-      <a class="sb-item" data-page="bugs" data-label="Bugs"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/><path d="M9 7v-.7C9 4.7 10.5 3 12 3s3 1.7 3 3.3V7"/></svg></span><span class="sb-label">Bugs</span></a>
+      <div class="sb-group">Reports</div>
       <a class="sb-item" data-page="spillovers" data-label="Spillovers"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg></span><span class="sb-label">Spillovers</span></a>
-      <a class="sb-item" data-page="retro" data-label="Retrospective"><span class="sb-icon"><svg viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span><span class="sb-label">Retrospective</span></a>
       <a class="sb-item" data-page="performance" data-label="Performance"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span><span class="sb-label">Performance</span></a>
 
       <div class="sb-group">Admin</div>
@@ -755,6 +884,13 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
         <button class="btn pdf-btn" id="pdfBtn"><svg class="icn" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>PDF</button>
       </div>
       <div class="scroll-progress" aria-hidden="true"><div class="scroll-progress-fill" id="scrollProgressFill"></div></div>
+    </div>
+
+    <!-- Primary tab row (demo design) -->
+    <div class="nv-tabs" id="nvTabs">
+      <div class="nv-tab on" data-page="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Overview</div>
+      <div class="nv-tab" data-page="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>Team</div>
+      <div class="nv-tab" data-page="retro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>Retrospective</div>
     </div>
 
     <div class="page-content" id="mc">
@@ -815,6 +951,17 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
       <button class="btn" onclick="closePdfModal()">Cancel</button>
       <button class="btn btn-acc" onclick="generatePDF()">Export</button>
     </div>
+  </div>
+</div>
+
+<!-- Reusable detail modal — opened by clicking charts / team tiles -->
+<div class="nv-detail-modal" id="nvDetailModal" onclick="if(event.target===this)nvCloseDetail()">
+  <div class="nv-detail-card">
+    <div class="nv-detail-head">
+      <div><div class="nv-detail-title" id="nvDetailTitle">Details</div><div class="nv-detail-sub" id="nvDetailSub"></div></div>
+      <button class="nv-detail-close" onclick="nvCloseDetail()" title="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="nv-detail-body" id="nvDetailBody"></div>
   </div>
 </div>
 
@@ -920,7 +1067,7 @@ function process(json,spId){
 
   // Bugs & polish: filter by ticket type + priority only.
   //   • Bugs   = ticketType "Bug",      priority ≠ "Deferred"
-  //   • Polish = ticketType "Polish", priority ≠ "Deferred"
+  //   • Polish = ticketType "Feedback", priority ≠ "Deferred"
   // We intentionally do NOT filter by dueDate any more — the team treats the
   // Bugs section in Asana as a live queue: whatever sits there is "current".
   // Bugs without a due date were getting silently dropped by the old window
@@ -1296,7 +1443,9 @@ var PAGES = {
 // Charts inside each section are lazy-rendered via IntersectionObserver
 // (chart only initializes when its section approaches the viewport).
 // Users + Settings stay single-page (admin-only, alag mental context).
-var OUTLINER_PAGES = ['overview','goals','burndown','team','bugs','spillovers','retro','performance'];
+// Empty = pure tab-switching mode (demo design): one page visible at a time,
+// driven by the top tab-row + rail. (Outliner long-scroll mode disabled.)
+var OUTLINER_PAGES = [];
 function isOutlinerPage(page){ return OUTLINER_PAGES.indexOf(page) !== -1; }
 
 // Tracks which outliner sections have been rendered in the current data cycle.
@@ -1368,6 +1517,10 @@ function switchPage(page){
   }
   // Update active nav
   document.querySelectorAll('.sb-item').forEach(function(el){
+    el.classList.toggle('on', el.dataset.page === page);
+  });
+  // Reflect active state on the top tab-row (Overview / Team / Retrospective)
+  document.querySelectorAll('.nv-tab').forEach(function(el){
     el.classList.toggle('on', el.dataset.page === page);
   });
   positionSidebarIndicator();
@@ -1535,14 +1688,9 @@ function bindScrollProgress(){
 
 function renderPage(page, d){
   if(page === 'overview'){
-    doKPIs(d); doProgress(d);
-  } else if(page === 'goals'){
-    doSprintGoal(d);
-  } else if(page === 'burndown'){
-    doBurn(d);
+    doOverview(d);
   } else if(page === 'team'){
-    doArea(d); doIndividual(d, curIndvTeam || 'All'); doScopeEffort(d); doImpact(d);
-    doAssigneeTaskDetail(d);
+    doTeamDemo(d);
   } else if(page === 'bugs'){
     doBugsBacklog(d);
     doPolish(d);
@@ -1603,70 +1751,76 @@ function shell(){
   return ''
   /* OVERVIEW */
   +'<div class="page active" id="page-overview" data-section-label="Overview">'
-  +'<div class="krow" id="kr1"></div>'
-  +'<div class="krow" id="kr2"></div>'
-  +'<div class="sp-card">'
-  +'<div class="sp-top"><span class="sp-title">Sprint progress</span><span class="sp-badge" id="spB"></span></div>'
-  +'<div class="sp-meta"><span id="spD"></span><span id="spP" style="font-weight:500;color:var(--text)"></span></div>'
-  +'<div class="sp-track"><div class="sp-fill" id="spF"></div></div>'
-  +'<div class="sp-hint" id="spH"></div>'
-  +'<div class="day-row" id="dRow"></div>'
-  +'<div class="tp-grid" id="tpG"></div>'
+  /* ── Top row: completion donut · status grid · bugs donut · scope donut · missing hours ── */
+  +'<div class="nv-ov-top">'
+  +  '<div class="nv-card nv-ov-card">'
+  +    '<div class="nv-hd"><span class="nv-card-t">Completion Rate</span><span class="nv-pill" id="ovCompPill"></span></div>'
+  +    '<div class="nv-donut"><canvas id="crD"></canvas><div class="nv-donut-c" id="crDc"></div></div>'
+  +    '<div class="nv-chips" id="ovCompChips"></div>'
+  +  '</div>'
+  +  '<div class="nv-card nv-ov-card">'
+  +    '<div class="nv-hd"><span class="nv-card-t">Status</span><span class="nv-pill" id="ovStatusPill"></span></div>'
+  +    '<div class="nv-status" id="ovStatus"></div>'
+  +  '</div>'
+  +  '<div class="nv-card nv-ov-card">'
+  +    '<div class="nv-hd"><span class="nv-card-t">Bugs &amp; Polishes</span></div>'
+  +    '<div class="nv-donut sm"><canvas id="bugD"></canvas><div class="nv-donut-c" id="bugDc"></div></div>'
+  +    '<div class="nv-chips" id="ovBugChips"></div>'
+  +  '</div>'
+  +  '<div class="nv-card nv-ov-card">'
+  +    '<div class="nv-hd"><span class="nv-card-t">Scope Creep</span></div>'
+  +    '<div class="nv-donut sm"><canvas id="scD"></canvas><div class="nv-donut-c" id="scDc"></div></div>'
+  +    '<div class="nv-chips" id="ovScopeChips"></div>'
+  +  '</div>'
+  +  '<div class="nv-card nv-ov-card">'
+  +    '<div class="nv-hd"><span class="nv-card-t">Missing Hours</span></div>'
+  +    '<div class="nv-mh-total" id="ovMissTotal"></div>'
+  +    '<div class="nv-mh-list" id="ovMissList"></div>'
+  +    '<div class="nv-mh-foot" id="ovMissFoot"></div>'
+  +  '</div>'
   +'</div>'
+  /* ── Info row: burndown + sprint progress ── */
+  +'<div class="nv-ov-info">'
+  +  '<div class="cc">'
+  +    '<div class="cc-t">Burndown chart — remaining hours</div>'
+  +    '<div class="cc-s">Ideal line is based on team capacity (sum of daily hours of active members). Set per-user hours in Users page.</div>'
+  +    '<div class="leg"><span class="li"><span class="lsq" style="background:#5b6ef5"></span>Ideal burndown</span>'
+  +    '<span class="li"><span class="lsq" style="background:#f05252"></span>Actual remaining</span></div>'
+  +    '<div style="position:relative;height:300px"><canvas id="bC"></canvas></div>'
+  +    '<div id="burnCapInfo" style="font-size:11px;color:var(--mut);margin-top:10px"></div>'
+  +  '</div>'
+  +  '<div class="nv-card nv-pg-card">'
+  +    '<div class="nv-pg-top"><span class="nv-pg-title">Sprint progress</span>'
+  +      '<span class="nv-pg-badges"><span class="nv-pill" id="spBadge"></span><span class="nv-pill" id="spBadge2"></span></span></div>'
+  +    '<div class="nv-pg-line"><span class="nv-pg-dates" id="spDates"></span><span class="nv-pg-pct" id="spPct"></span></div>'
+  +    '<div class="nv-pg-track"><i id="spFill"></i></div>'
+  +    '<div class="nv-pg-hint" id="spHint"></div>'
+  +    '<div class="nv-pg-days" id="spDays"></div>'
+  +    '<div class="nv-pg-depts" id="spDepts"></div>'
+  +  '</div>'
   +'</div>'
-
-  /* GOALS */
-  +'<div class="page" id="page-goals" data-section-label="Sprint Goals">'
-  +'<div id="sprintGoalBox"></div>'
-  +'</div>'
-
-  /* BURNDOWN */
-  +'<div class="page" id="page-burndown" data-section-label="Burndown">'
-  +'<div class="cc">'
-  +'<div class="cc-t">Burndown chart — remaining hours</div>'
-  +'<div class="cc-s">Ideal line is based on team capacity (sum of daily hours of active members). Set per-user hours in Users page.</div>'
-  +'<div class="leg"><span class="li"><span class="lsq" style="background:#5b6ef5"></span>Ideal burndown</span>'
-  +'<span class="li"><span class="lsq" style="background:#f05252"></span>Actual remaining</span></div>'
-  +'<div style="position:relative;height:340px"><canvas id="bC"></canvas></div>'
-  +'<div id="burnCapInfo" style="font-size:11px;color:var(--mut);margin-top:10px"></div>'
-  +'</div>'
+  /* ── Sprint goal bar (full goal editor) ── */
+  +'<div class="nv-goal"><div id="sprintGoalBox"></div></div>'
   +'</div>'
 
   /* TEAM */
   +'<div class="page" id="page-team" data-section-label="Team">'
-  +'<div class="cc"><div class="cc-t">Est. time vs time logged — by team</div>'
-  +'<div class="cc-s">Estimated hours vs actual logged hours per team</div>'
-  +'<div class="leg"><span class="li"><span class="lsq" style="background:#5b6ef5"></span>Est. time</span>'
-  +'<span class="li"><span class="lsq" style="background:#18c97a"></span>Time logged</span></div>'
-  +'<div style="position:relative;height:220px"><canvas id="aC"></canvas></div></div>'
-  +'<div class="cc"><div class="cc-t">Est. time vs time logged — individual</div>'
-  +'<div class="cc-s">Filter by team · Click any bar to see task breakdown</div>'
-  +'<div class="tabs" id="indvTabs"></div>'
-  +'<div class="leg"><span class="li"><span class="lsq" style="background:#9b72f5"></span>Est. time</span>'
-  +'<span class="li"><span class="lsq" style="background:#18c97a"></span>Time logged (under)</span>'
-  +'<span class="li"><span class="lsq" style="background:#f05252"></span>Time logged (overtime)</span></div>'
-  +'<div id="indvWrap" style="position:relative;min-height:300px"><canvas id="indvC" style="cursor:pointer"></canvas></div>'
-  +'<div id="bdBox" style="display:none;margin-top:20px;background:var(--sur2);padding:16px;border-radius:10px;border:1px solid var(--acc)"></div>'
+  +'<div class="nv-card nv-team-card">'
+  +  '<div class="nv-team-hd"><span class="nv-card-t">Est. time vs time logged — individual</span><span class="nv-pill" id="tmPill"></span></div>'
+  +  '<div class="nv-team-sub">Filter by team · estimated vs actual logged hours per person</div>'
+  +  '<div class="nv-filter-row" id="tmFilter"></div>'
+  +  '<div class="nv-team-leg"><span class="i"><span class="sq" style="background:#9b72f5"></span>Est. time</span>'
+  +  '<span class="i"><span class="sq" style="background:#18c97a"></span>Logged (under)</span>'
+  +  '<span class="i"><span class="sq" style="background:#f05252"></span>Logged (overtime)</span></div>'
+  +  '<div class="nv-indv-chart"><canvas id="indvC"></canvas></div>'
   +'</div>'
-  +'<div class="g2">'
-  +'<div class="cc"><div class="cc-t">Scope creep by team</div><div class="cc-s">Planned (blue) vs unplanned (red)</div><div id="scB"></div></div>'
-  +'<div class="cc"><div class="cc-t">Effort distribution</div><div class="cc-s">Logged hours by team</div>'
-  +'<div class="ef-wrap"><div style="position:relative;width:110px;height:110px;flex-shrink:0"><canvas id="dC"></canvas></div>'
-  +'<div class="ef-leg" id="eL"></div></div></div></div>'
-  +'<div id="impactS"></div>'
-
-  +'<div class="sec" style="margin-top:22px">Assignee task detail</div>'
-  +'<div class="cc"><div class="cc-t">Roster</div>'
-  +'<div class="cc-s">Tap any member card to open their full task &amp; subtask breakdown</div>'
-  +'<div class="atd-controls">'
-  +'<input type="text" id="atdSearch" class="atd-search" placeholder="Search member or task name...">'
-  +'<div class="tabs" id="atdTabs"></div>'
+  +'<div class="nv-team-bottom">'
+  +  '<div class="nv-card nv-sc-card"><div class="nv-card-t">Scope creep by team</div>'
+  +    '<div class="nv-team-sub" style="margin:2px 0 10px">Planned (blue) vs unplanned (red)</div>'
+  +    '<div class="nv-sc-rows" id="tmScRows"></div></div>'
+  +  '<div class="nv-stat-tiles" id="tmStats"></div>'
   +'</div>'
-  +'<div id="atdSummary" class="atd-summary"></div>'
-  +'<div id="atdList" class="member-grid"></div>'
-  +'</div>'
-  +'<div class="cc"><div id="subS"></div></div>'
-
+  +'<div class="nv-unplanned-bar" id="tmUnplanned"></div>'
   +'</div>'
 
   /* BUGS */
@@ -1710,7 +1864,250 @@ function shell(){
   ;
 }
 
-/* ── KPIs ── */
+/* ── OVERVIEW HERO (demo design): donuts + status + missing hours,
+   then reuse the rich burndown / sprint-progress / goal renderers ── */
+function nvDonut(id, data, colors, onSeg){
+  var el=document.getElementById(id); if(!el) return null;
+  if(CH[id]) CH[id].destroy();
+  CH[id]=new Chart(el,{type:'doughnut',
+    data:{datasets:[{data:data, backgroundColor:colors, borderWidth:0, spacing:2}]},
+    options:{cutout:'72%', responsive:true, maintainAspectRatio:false,
+      onClick:function(evt,els){ if(onSeg && els && els.length) onSeg(els[0].index); },
+      onHover:function(evt,els){ if(onSeg && evt.native) evt.native.target.style.cursor = els.length?'pointer':'default'; },
+      plugins:{legend:{display:false}, tooltip:{enabled:true}}}});
+  return CH[id];
+}
+function nvChips(arr){
+  return arr.map(function(k){
+    return '<span class="nv-chip"><span class="n" style="background:'+k.c+'">'+k.n+'</span>'+k.l+'</span>';
+  }).join('');
+}
+function nvStatusPill(el, rate){
+  if(!el) return;
+  var s = rate>=85?['good','On Track']:(rate>=60?['warn','At Risk']:['bad','Off Track']);
+  el.className='nv-pill '+s[0]; el.textContent=s[1];
+}
+function doOverview(d){
+  var COL={blue:'#4d9fff',green:'#18c97a',amber:'#f5a623',red:'#f05252',bug:'#ff4d6d',polish:'#5b6ef5'};
+
+  // Completion donut (clickable: segment -> task list)
+  nvDonut('crD',[d.done,d.prog,d.ns,d.ovd],[COL.green,COL.blue,COL.amber,COL.red],
+    function(i){ nvStatusDetail(['done','wip','ns','ovd'][i]); });
+  var crc=document.getElementById('crDc'); if(crc) crc.textContent=d.compRate+'%';
+  var cChips=document.getElementById('ovCompChips');
+  if(cChips) cChips.innerHTML=nvChips([
+    {c:COL.green,n:d.done,l:'Completed'},{c:COL.blue,n:d.prog,l:'In Progress'},
+    {c:COL.amber,n:d.ns,l:'Not Started'},{c:COL.red,n:d.ovd,l:'Overdue'}]);
+  nvStatusPill(document.getElementById('ovCompPill'), d.compRate);
+
+  // Status grid
+  var rem=Math.max(0,(d.dTot||0)-(d.dDone||0));
+  var sg=[
+    {l:'Original Est.',v:rnd(d.totEst)+' hrs',c:'blue', s:'Planned workload'},
+    {l:'Total Logged', v:rnd(d.totLog)+' hrs',c:'green',s:'Actual work done'},
+    {l:'Efficiency',   v:d.util+'%',          c:'amber',s:'Log vs estimate'},
+    {l:'Extra Hours',  v:rnd(d.unplannedEst)+' hrs',c:'amber',s:'Added later'},
+    {l:'Days Left',    v:rem+'D',             c:'coral',s:'To sprint end'},
+    {l:'Unplanned',    v:d.unplannedCount+'', c:'coral',s:'Tasks added'}
+  ];
+  var sgEl=document.getElementById('ovStatus');
+  if(sgEl) sgEl.innerHTML=sg.map(function(x){
+    return '<div class="nv-sg"><div class="l">'+x.l+'</div><div class="v '+x.c+'">'+x.v+'</div><div class="s">'+x.s+'</div></div>';
+  }).join('');
+  nvStatusPill(document.getElementById('ovStatusPill'), d.compRate);
+
+  // Bugs & Polish donut
+  var nb=(d.bugs||[]).length, np=(d.polish||[]).length;
+  nvDonut('bugD',[nb,np],[COL.bug,COL.polish], function(i){ nvBugDetail(i===0?'bug':'polish'); });
+  var bdc=document.getElementById('bugDc'); if(bdc) bdc.textContent=(nb+np);
+  var bChips=document.getElementById('ovBugChips');
+  if(bChips) bChips.innerHTML=nvChips([{c:COL.bug,n:nb,l:'Bugs'},{c:COL.polish,n:np,l:'Polishes'}]);
+
+  // Scope creep donut (hours: unplanned vs planned)
+  var unEst=rnd(d.unplannedEst), plEst=rnd(d.plannedEst);
+  nvDonut('scD',[unEst,plEst],[COL.amber,COL.blue], function(i){ nvScopeDetail(i===0?'unplanned':'planned'); });
+  var sdc=document.getElementById('scDc'); if(sdc) sdc.textContent=d.unplannedCount;
+  var sChips=document.getElementById('ovScopeChips');
+  if(sChips) sChips.innerHTML=nvChips([{c:COL.amber,n:unEst,l:'Unplanned hrs'},{c:COL.blue,n:plEst,l:'Planned hrs'}]);
+
+  // Missing hours
+  doMissingHours(d);
+
+  // Sprint progress (demo design, clickable dept tiles) + burndown + goal
+  doSprintProgress(d);
+  doBurn(d);
+  doSprintGoal(d);
+}
+
+function doMissingHours(d){
+  var listEl=document.getElementById('ovMissList');
+  var totEl =document.getElementById('ovMissTotal');
+  var footEl=document.getElementById('ovMissFoot');
+  if(!listEl) return;
+  var cap=d.teamCapacity||{}, dDone=d.dDone||0;
+  var active=(d.assignees||[]).filter(function(a){return a.n!=='Unassigned'&&a.tot>0;});
+  var rows=active.map(function(a){
+    var perDay=(cap[a.n]&&cap[a.n].hours>0)?cap[a.n].hours:6;
+    var supposed=perDay*dDone, logged=a.log||0;
+    return {n:a.n, supposed:rnd(supposed), logged:rnd(logged), miss:rnd(logged-supposed)};
+  });
+  var supposedTotal=rnd(rows.reduce(function(s,r){return s+r.supposed;},0));
+  var under=rows.filter(function(r){return r.miss<0;}).sort(function(x,y){return x.miss-y.miss;}).slice(0,3);
+  if(footEl) footEl.innerHTML='<span class="nv-chip"><span class="n" style="background:#f5a623">'+supposedTotal+'</span>Supposed logged hrs</span>';
+  if(!under.length){
+    if(totEl) totEl.textContent='0 hrs';
+    listEl.innerHTML='<div class="nv-mh-empty">Everyone is logging on target.<br>No missing hours.</div>';
+    return;
+  }
+  var totMiss=rnd(under.reduce(function(s,r){return s+r.miss;},0));
+  if(totEl) totEl.textContent=totMiss+' hrs';
+  listEl.innerHTML=under.map(function(m,i){
+    var first=(m.n||'').split(' ')[0];
+    var denom=m.logged+Math.abs(m.miss);
+    var p=denom>0?Math.round(m.logged/denom*100):0;
+    return '<div class="nv-mh" style="top:'+(i*42)+'px">'
+      +'<div class="top"><span class="nm">'+first+'</span><span class="vl">'+m.miss+' hrs</span></div>'
+      +'<div class="bar"><i style="width:'+p+'%;background:#5b6ef5"></i><i style="width:'+(100-p)+'%;background:#f05252"></i></div>'
+      +'</div>';
+  }).join('');
+}
+
+/* ══ CLICKABLE-CHART DETAIL SYSTEM ══════════════════════════════
+   One reusable modal. Each chart/tile click builds a filtered task
+   list from the current sprint data and opens it. ═══════════════ */
+function escAttr(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+function nvDetail(title, sub, html){
+  var m=document.getElementById('nvDetailModal'); if(!m) return;
+  document.getElementById('nvDetailTitle').textContent = title || 'Details';
+  document.getElementById('nvDetailSub').textContent   = sub || '';
+  document.getElementById('nvDetailBody').innerHTML     = html || '';
+  m.classList.add('open');
+}
+function nvCloseDetail(){ var m=document.getElementById('nvDetailModal'); if(m) m.classList.remove('open'); }
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') nvCloseDetail(); });
+
+// Combined work-item list (leaf tasks + subtasks + bugs + polish), mirrors process()
+function nvAllItems(d){
+  var subParents={};
+  (d.subtasks||[]).forEach(function(s){ var p=(s.parentTask||'').trim(); if(p) subParents[p]=true; });
+  var leaves=(d.tasks||[]).filter(function(t){ return !subParents[(t.taskName||'').trim()]; });
+  return leaves.concat(d.subtasks||[]).concat(d.bugs||[]).concat(d.polish||[]);
+}
+function nvIsDone(t){ return (t.status||'').trim()==='Done'; }
+function nvIsWip(t){ var s=(t.status||'').trim(); return s==='In Progress'||s==='In Review'||s==='Build Awaiting'; }
+function nvIsOverdue(t,d){
+  if(nvIsDone(t)) return false;
+  if(t.dueDate){ try{ if(pd(t.dueDate)<new Date()) return true; }catch(e){} }
+  if(d.spEnd && new Date()>d.spEnd) return true;
+  return false;
+}
+function nvItemUnplanned(t){
+  return (t.featureTag||'').toLowerCase().split(',').some(function(x){ return x.trim()==='unplanned'; });
+}
+function nvTaskRows(items){
+  if(!items || !items.length) return '<div class="nv-dt-empty">No items to show.</div>';
+  return items.map(function(t){
+    var name=t.taskName||t.name||'—';
+    var who =t.assignee||t.asn||'';
+    var team=t.teamCategory||t.team||'';
+    var st  =(t.status||'').trim();
+    var est =parseFloat(t.estTime!=null?t.estTime:t.est)||0;
+    var log =parseFloat(t.timeLog!=null?t.timeLog:t.log)||0;
+    var sc  =st==='Done'?'g':((st==='In Progress'||st==='In Review'||st==='Build Awaiting')?'b':'m');
+    var sub =[who,team].filter(Boolean).join(' · ');
+    return '<div class="nv-dt-row"><div class="nv-dt-main"><div class="nv-dt-name">'+escHtml(name)+'</div>'
+      +(sub?'<div class="nv-dt-sub">'+escHtml(sub)+'</div>':'')+'</div>'
+      +'<div class="nv-dt-meta"><span class="nv-dt-badge '+sc+'">'+escHtml(st||'—')+'</span>'
+      +'<span class="nv-dt-hrs">'+rnd(log)+' / '+rnd(est)+' h</span></div></div>';
+  }).join('');
+}
+// ── per-chart detail openers (read live sprint data) ──
+function nvStatusDetail(kind){
+  var d=window._sprintData; if(!d) return;
+  var items=nvAllItems(d), list, title;
+  if(kind==='done'){ list=items.filter(nvIsDone); title='Completed'; }
+  else if(kind==='wip'){ list=items.filter(nvIsWip); title='In progress'; }
+  else if(kind==='ovd'){ list=items.filter(function(t){return nvIsOverdue(t,d);}); title='Overdue'; }
+  else { list=items.filter(function(t){return !nvIsDone(t)&&!nvIsWip(t);}); title='Not started'; }
+  nvDetail('Completion · '+title, list.length+' item(s)', nvTaskRows(list));
+}
+function nvBugDetail(kind){
+  var d=window._sprintData; if(!d) return;
+  var list=kind==='bug'?(d.bugs||[]):(d.polish||[]);
+  nvDetail(kind==='bug'?'Bugs':'Polishes', list.length+' item(s)', nvTaskRows(list));
+}
+function nvScopeDetail(kind){
+  var d=window._sprintData; if(!d) return;
+  if(kind==='unplanned'){
+    nvDetail('Scope creep · Unplanned', (d.unplanned||[]).length+' task(s) · '+rnd(d.unplannedEst)+' hrs', nvTaskRows(d.unplanned||[]));
+  } else {
+    var list=nvAllItems(d).filter(function(t){ return !nvItemUnplanned(t); });
+    nvDetail('Scope · Planned work', list.length+' item(s) · '+rnd(d.plannedEst)+' hrs', nvTaskRows(list));
+  }
+}
+function nvPersonDetail(name){
+  var d=window._sprintData; if(!d || !name) return;
+  var list=nvAllItems(d).filter(function(t){ return (t.assignee||'')===name; });
+  var done=list.filter(nvIsDone).length;
+  nvDetail(name, done+'/'+list.length+' done', nvTaskRows(list));
+}
+function nvTeamDetail(name){
+  var d=window._sprintData; if(!d || !name) return;
+  var list=nvAllItems(d).filter(function(t){ return (t.teamCategory||'')===name; });
+  var done=list.filter(nvIsDone).length;
+  nvDetail(name+' — team progress', done+'/'+list.length+' done', nvTaskRows(list));
+}
+
+/* ── SPRINT PROGRESS (demo design): day badges + clickable dept tiles ── */
+function doSprintProgress(d){
+  var pct=d.dTot>0?Math.min(100,Math.round(d.dDone/d.dTot*100)):0;
+  var rem=Math.max(0,d.dTot-d.dDone);
+  var timePct=d.dTot>0?(d.dDone/d.dTot*100):0;
+  // Badge 1: days remaining
+  var b1=document.getElementById('spBadge');
+  if(b1){
+    var s1=rem===0?['good','Sprint complete']:(rem===1?['bad','Last day']:[(rem<=3?'warn':'good'),rem+' days remaining']);
+    b1.className='nv-pill '+s1[0]; b1.textContent=s1[1];
+  }
+  // Badge 2: on/off track (work done vs time elapsed)
+  var b2=document.getElementById('spBadge2');
+  if(b2){
+    if(rem===0){ b2.style.display='none'; }
+    else { b2.style.display='';
+      var onTrack = d.compRate >= (timePct-12);
+      b2.className='nv-pill '+(onTrack?'good':'bad'); b2.textContent=onTrack?'On Track':'Off Track';
+    }
+  }
+  var dt=document.getElementById('spDates'); if(dt) dt.textContent=(d.startDate||'')+' — '+(d.endDate||'');
+  var pe=document.getElementById('spPct'); if(pe) pe.textContent=pct+'% complete';
+  var fl=document.getElementById('spFill'); if(fl) fl.style.width=pct+'%';
+  var hn=document.getElementById('spHint'); if(hn) hn.textContent=d.dDone+' of '+d.dTot+' days elapsed · '+rem+' days to go';
+  // day badges
+  var days=document.getElementById('spDays');
+  if(days){
+    var cells='<span class="nv-day past" title="Planning day (excluded)">D0</span>';
+    for(var i=1;i<=Math.min(d.dTot,30);i++){
+      var cls=i<=d.dDone?'past':((i===d.dDone+1 && rem>0)?'now':'future');
+      cells+='<span class="nv-day '+cls+'">D'+i+'</span>';
+    }
+    days.innerHTML=cells;
+  }
+  // clickable dept tiles
+  var depts=document.getElementById('spDepts');
+  if(depts){
+    depts.innerHTML=(d.teams||[]).map(function(t){
+      var tp=pc(t.done,t.tot);
+      var col=tp>=80?'var(--grn)':(tp>=50?'var(--amb)':'var(--red)');
+      return '<div class="nv-dept" onclick="nvTeamDetail(\''+escAttr(t.n)+'\')" title="Click to see '+escAttr(t.n)+' tasks">'
+        +'<div class="top"><span class="nm">'+escHtml(t.n)+'</span><span class="pc" style="color:'+col+'">'+tp+'%</span></div>'
+        +'<div class="tr"><i style="width:'+tp+'%;background:'+col+'"></i></div>'
+        +'<div class="mt">'+t.done+'/'+t.tot+' done · '+rnd(t.log||0)+'/'+rnd(t.est||0)+' hrs</div></div>';
+    }).join('') || '<div class="nv-dt-empty">No team data.</div>';
+  }
+}
+
+/* ── KPIs (legacy — kept for reference, no longer rendered) ── */
 function doKPIs(d){
   var r1=[
     {c:'blue', l:'Completion rate',  v:d.compRate+'%', s:d.compRate>=85?'Healthy sprint':'Below 85% target',    sc:d.compRate>=85?'g':'r'},
@@ -2036,6 +2433,89 @@ function doBurn(d){
     }}},
     scales:{x:{grid:{color:c.grid},ticks:{color:c.text,font:{weight:'500'}}},
             y:{grid:{color:c.grid},ticks:{color:c.text},title:{display:true,text:'Remaining Hours',color:c.text},beginAtZero:true}}}});
+}
+
+/* ── TEAM PAGE (demo design): individual est-vs-logged bars + filter pills,
+   scope creep by team, 4 stat tiles, unplanned bar ── */
+function doTeamDemo(d){
+  var COL={purple:'#9b72f5',green:'#18c97a',red:'#f05252',blue:'#5b6ef5'};
+  nvStatusPill(document.getElementById('tmPill'), d.compRate);
+
+  // Filter pills (All + each team)
+  var teams=(d.teams||[]).map(function(t){return t.n;});
+  var filters=['All'].concat(teams);
+  if(!window._tmFilter || filters.indexOf(window._tmFilter)<0) window._tmFilter='All';
+  var fr=document.getElementById('tmFilter');
+  if(fr){
+    fr.innerHTML=filters.map(function(f){
+      return '<button class="nv-fpill'+(f===window._tmFilter?' on':'')+'" data-f="'+f.replace(/"/g,'&quot;')+'">'+f+'</button>';
+    }).join('');
+    fr.querySelectorAll('.nv-fpill').forEach(function(b){
+      b.addEventListener('click',function(){ window._tmFilter=this.dataset.f; doTeamDemo(d); });
+    });
+  }
+
+  // Individual chart (assignees, filtered by team)
+  var asn=(d.assignees||[]).filter(function(a){return a.n!=='Unassigned' && (a.est>0||a.log>0);});
+  if(window._tmFilter!=='All') asn=asn.filter(function(a){return a.team===window._tmFilter;});
+  asn=asn.slice().sort(function(a,b){return (b.est||0)-(a.est||0);});
+  var labels=asn.map(function(a){return a.n;});
+  var est=asn.map(function(a){return rnd(a.est);});
+  var log=asn.map(function(a){return rnd(a.log);});
+  var logCol=asn.map(function(a){return (a.log>a.est)?COL.red:COL.green;});
+  if(CH.indv) CH.indv.destroy();
+  var ce=document.getElementById('indvC');
+  if(ce){
+    ce.parentElement.style.height=Math.max(150, labels.length*42+30)+'px';
+    var c=cc();
+    if(labels.length){
+      CH.indv=new Chart(ce,{type:'bar',
+        data:{labels:labels,datasets:[
+          {label:'Est. time',data:est,backgroundColor:COL.purple,borderRadius:3,barThickness:11},
+          {label:'Logged',  data:log,backgroundColor:logCol,borderRadius:3,barThickness:11}
+        ]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          onClick:function(evt,els){ if(els&&els.length){ var a=asn[els[0].index]; if(a) nvPersonDetail(a.n); } },
+          onHover:function(evt,els){ if(evt.native) evt.native.target.style.cursor=els.length?'pointer':'default'; },
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return '  '+ctx.dataset.label+': '+ctx.parsed.x+' hrs';},afterBody:function(){return '\nClick for task breakdown';}}}},
+          scales:{x:{beginAtZero:true,grid:{color:c.grid},ticks:{color:c.text,font:{size:10}}},
+            y:{grid:{display:false},ticks:{color:c.text,font:{family:'Space Grotesk',weight:'700',size:10}}}}}});
+    } else {
+      ce.parentElement.innerHTML='<div class="empty" style="padding:30px;text-align:center;color:var(--mut)">No data for this team.</div>';
+    }
+  }
+
+  // Scope creep by team
+  var scEl=document.getElementById('tmScRows');
+  if(scEl){
+    var rows=(d.scope||[]).filter(function(s){return (s.tot||0)>0;});
+    scEl.innerHTML=rows.length ? rows.map(function(s){
+      var tot=s.tot||1, unp=Math.round(s.un/tot*100), pl=100-unp;
+      return '<div class="nv-sc-row"><span class="nv-sc-name">'+s.n+'</span>'
+        +'<span class="nv-sc-track"><i style="width:'+pl+'%;background:#5b6ef5"></i>'
+        +(unp>0?'<i style="width:'+unp+'%;background:#f05252"></i>':'')+'</span>'
+        +'<span class="nv-sc-pct">'+unp+'% unplanned</span></div>';
+    }).join('') : '<div class="nv-team-sub">No team data.</div>';
+  }
+
+  // Stat tiles
+  var hi=d.healthImpact||0;
+  var stats=[
+    {v:d.unplannedCount+'',        l:'Unplanned tasks added',    c:'#f05252'},
+    {v:rnd(d.unplannedEst)+' hrs',  l:'Extra hours (unplanned)',  c:'#f5a623'},
+    {v:rnd(d.plannedEst)+' hrs',    l:'Originally planned hours',  c:'#9b72f5'},
+    {v:hi+'%',                      l:'Sprint health impact',     c:(hi<=10?'#18c97a':(hi<=20?'#f5a623':'#f05252'))}
+  ];
+  var stEl=document.getElementById('tmStats');
+  if(stEl) stEl.innerHTML=stats.map(function(s){
+    return '<div class="nv-stat-tile"><span class="num" style="color:'+s.c+'">'+s.v+'</span><span class="lab">'+s.l+'</span></div>';
+  }).join('');
+
+  // Unplanned bar
+  var ub=document.getElementById('tmUnplanned');
+  if(ub) ub.innerHTML='<div class="nv-ub-left"><span class="nv-ub-title">Unplanned tasks</span>'
+    +'<span class="nv-ub-badge">'+d.unplannedCount+'</span></div>'
+    +'<span class="nv-ub-meta">'+d.unplannedCount+' task(s) added after sprint start · '+rnd(d.unplannedEst)+' hrs</span>';
 }
 
 /* ── AREA CHART ── */
@@ -2846,11 +3326,12 @@ function togglePolishList(){
 }
 
 /* ── SPRINT RETROSPECTIVE ── */
+// Demo design: two retro cards — Action Items + Challenges.
+// (Went Well / Key learnings ki saved sheet-data preserve rehti hai, bas yahan
+//  display nahi hoti — wapas chahiye to inhe dobara add kar dena.)
 var RETRO_SECTIONS = [
-  { kind:'wentWell',   icon:'<svg class="icn icn-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>', title:'What went well',    placeholder:'A positive outcome or win from this sprint…' },
-  { kind:'challenges', icon:'<svg class="icn icn-lg" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>', title:'Challenges',         placeholder:'An issue, blocker, or friction point…' },
-  { kind:'actions',    icon:'<svg class="icn icn-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', title:'Action items',       placeholder:'Specific improvement to try next sprint…' },
-  { kind:'learnings',  icon:'<svg class="icn icn-lg" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>', title:'Key learnings',      placeholder:'Insight or takeaway worth remembering…' },
+  { kind:'actions',    icon:'<svg class="icn icn-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>', title:'Action Items', placeholder:'Specific improvement to try next sprint…' },
+  { kind:'challenges', icon:'<svg class="icn icn-lg" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>', title:'Challenges', placeholder:'An issue, blocker, or friction point…' },
 ];
 
 function doRetrospective(d){
@@ -3826,6 +4307,10 @@ function setupSidebar(){
       if(this.getAttribute('data-hidden') === '1') return;
       switchPage(this.dataset.page);
     });
+  });
+  // Top tab-row (demo design)
+  document.querySelectorAll('.nv-tab').forEach(function(el){
+    el.addEventListener('click', function(){ switchPage(this.dataset.page); });
   });
 }
 
