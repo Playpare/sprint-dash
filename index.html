@@ -110,6 +110,24 @@ body{font-family:var(--font-body);font-size:13px;transition:background .3s,color
 .sb-logout{background:transparent;border:0.5px solid var(--bor);color:var(--mut);width:32px;height:32px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .12s}
 .sb-logout:hover{border-color:var(--red);color:var(--red)}
 
+/* ── SIDEBAR ALERTS ── */
+.sb-alerts{margin:10px 8px 6px;border:1px solid rgba(240,82,82,.28);border-radius:12px;background:linear-gradient(180deg,rgba(240,82,82,.1),rgba(240,82,82,.04));box-shadow:0 10px 28px rgba(240,82,82,.08),inset 0 1px 0 rgba(255,255,255,.04);padding:10px 10px 8px;cursor:pointer;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+.sb-alerts:hover{transform:translateY(-1px);border-color:rgba(240,82,82,.45);box-shadow:0 12px 34px rgba(240,82,82,.14),inset 0 1px 0 rgba(255,255,255,.05)}
+.sb-alerts-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.sb-alerts-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:#ffb2b2}
+.sb-alerts-badge{min-width:22px;height:18px;padding:0 6px;border-radius:999px;background:rgba(240,82,82,.18);color:#ff8181;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.sb-alerts-sub{font-size:9px;color:var(--mut);line-height:1.4;margin-bottom:8px}
+.sb-alerts-list{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;padding-right:2px}
+.sb-alerts-list::-webkit-scrollbar{width:6px}
+.sb-alerts-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
+.sb-alert-item{display:flex;align-items:flex-start;gap:8px;padding:6px 7px;border-radius:8px;background:rgba(0,0,0,.12);border:0.5px solid rgba(255,255,255,.04)}
+.sb-alert-dot{width:7px;height:7px;border-radius:50%;background:#f05252;flex-shrink:0;box-shadow:0 0 0 4px rgba(240,82,82,.12);margin-top:4px}
+.sb-alert-main{flex:1;min-width:0}
+.sb-alert-name{font-size:11px;color:var(--text);font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-alert-meta{font-size:9px;color:var(--mut);margin-top:2px;line-height:1.35}
+.sb-alert-miss{font-family:var(--font-mono);font-size:10px;font-weight:700;color:#ff8080;white-space:nowrap;flex-shrink:0}
+.sidebar.collapsed .sb-alerts{display:none !important}
+
 /* Hide Users page link for non-admins */
 .sb-item[data-page="users"][data-hidden="1"]{display:none}
 
@@ -703,8 +721,13 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
 .nv-sg .s{font-size:10px;color:var(--mut)}
 .nv-sg .v.blue{color:var(--acc)}.nv-sg .v.green{color:var(--grn)}.nv-sg .v.amber{color:var(--amb)}.nv-sg .v.coral{color:var(--red)}
 /* missing hours */
+.nv-ov-card.mh-clickable{cursor:pointer;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+.nv-ov-card.mh-clickable:hover{transform:translateY(-1px);border-color:rgba(91,110,245,.35);box-shadow:0 8px 24px rgba(91,110,245,.12)}
 .nv-mh-total{position:absolute;top:15px;right:17px;font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--red);z-index:2}
-.nv-mh-list{position:absolute;top:48px;left:0;right:0;bottom:42px}
+.nv-mh-list{position:absolute;top:48px;left:0;right:0;bottom:42px;overflow-y:auto;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--bor) transparent}
+.nv-mh-list::-webkit-scrollbar{width:8px}
+.nv-mh-list::-webkit-scrollbar-track{background:transparent}
+.nv-mh-list::-webkit-scrollbar-thumb{background:var(--bor);border-radius:8px}
 .nv-mh{position:absolute;left:18px;right:18px;height:30px}
 .nv-mh .top{display:flex;justify-content:space-between;align-items:baseline}
 .nv-mh .nm{font-size:12px;color:var(--text)}
@@ -784,7 +807,7 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
 /* ── Reusable detail modal (clickable charts) ── */
 .nv-detail-modal{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
 .nv-detail-modal.open{display:flex}
-.nv-detail-card{background:var(--sur);border:1px solid var(--bor);border-radius:14px;width:100%;max-width:560px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.nv-detail-card{background:var(--sur);border:1px solid var(--bor);border-radius:14px;width:100%;max-width:720px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.55)}
 .nv-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--bor)}
 .nv-detail-title{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--text)}
 .nv-detail-sub{font-size:11px;color:var(--mut);margin-top:3px}
@@ -834,6 +857,15 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
         <div class="sb-title">Playspare</div>
         <div class="sb-sub">Sprint Dashboard</div>
       </div>
+    </div>
+
+    <div class="sb-alerts" id="sbAlerts" role="button" tabindex="0" onclick="nvSidebarAlertsDetail()">
+      <div class="sb-alerts-hd">
+        <div class="sb-alerts-title">Alerts</div>
+        <div class="sb-alerts-badge" id="sbAlertsCount">0</div>
+      </div>
+      <div class="sb-alerts-sub" id="sbAlertsSub">People behind the 6 hrs/day pace</div>
+      <div class="sb-alerts-list" id="sbAlertsList"></div>
     </div>
 
     <nav class="sb-nav">
@@ -982,6 +1014,17 @@ function tc(team){
 function cc(){return{text:isDark?'#dde1f5':'#111424',grid:isDark?'rgba(150,160,220,.08)':'rgba(0,0,0,.06)'}}
 function pc(a,b){return b?Math.round(a/b*100):0;}
 function rnd(v){return Math.round(v*10)/10;}
+function fmtHours(v){
+  var n = Number(v);
+  if(!isFinite(n)) return '0 hrs';
+  var sign = n < 0 ? '-' : '';
+  n = Math.abs(n);
+  var whole = Math.floor(n);
+  var mins = Math.round((n - whole) * 60);
+  if(mins === 60){ whole += 1; mins = 0; }
+  var out = sign + whole + '.' + (mins < 10 ? '0' + mins : String(mins)) + ' hrs';
+  return out;
+}
 function pd(str){
   if(!str)return null;
   var s=str.toString().replace(/(\d+)(st|nd|rd|th)/i,'$1');
@@ -1291,6 +1334,36 @@ function process(json,spId){
     a.est=rnd(a.est); a.log=rnd(a.log);
   });
 
+  var deptMap = {};
+  Object.values(amap).forEach(function(a){
+    if((a.n||'') === 'Unassigned' || !a.team) return;
+    if(!deptMap[a.team]) deptMap[a.team] = {n:a.team, est:0, log:0, members:0, tasks:0};
+    deptMap[a.team].est += a.est;
+    deptMap[a.team].log += a.log;
+    deptMap[a.team].members++;
+    deptMap[a.team].tasks += a.tot || 0;
+  });
+  var deptTotals = Object.values(deptMap).sort(function(a,b){ return a.n.localeCompare(b.n); });
+  var deptEstTotal = rnd(deptTotals.reduce(function(s,t){ return s + (parseFloat(t.est)||0); }, 0));
+  var deptLogTotal = rnd(deptTotals.reduce(function(s,t){ return s + (parseFloat(t.log)||0); }, 0));
+  var deptUtil = pc(deptLogTotal, deptEstTotal);
+  var rawDeptMap = {};
+  tasks.concat(subtasks, bugs, polish).forEach(function(t){
+    var team = String(t.teamCategory||t.team||'').trim();
+    if(!team) return;
+    if(!rawDeptMap[team]) rawDeptMap[team] = {n:team, est:0, log:0, tasks:0};
+    rawDeptMap[team].est += parseFloat(t.estTime!=null?t.estTime:t.est)||0;
+    rawDeptMap[team].log += parseFloat(t.timeLog!=null?t.timeLog:t.log)||0;
+    rawDeptMap[team].tasks++;
+  });
+  var rawDeptTotals = Object.values(rawDeptMap).map(function(t){
+    t.est = rnd(t.est);
+    t.log = rnd(t.log);
+    return t;
+  }).sort(function(a,b){ return a.n.localeCompare(b.n); });
+  var rawDeptEstTotal = rnd(rawDeptTotals.reduce(function(s,t){ return s + (parseFloat(t.est)||0); }, 0));
+  var rawDeptLogTotal = rnd(rawDeptTotals.reduce(function(s,t){ return s + (parseFloat(t.log)||0); }, 0));
+
   // Sprint structure (weekends excluded — Mon-Fri only):
   //   Start date  = D0 (planning day)
   //   D1..DN     = working weekdays after D0, up to end date
@@ -1413,6 +1486,8 @@ function process(json,spId){
     unplannedCount:unplanned.length,
     unplannedEst:rnd(unplannedEst),
     plannedEst,healthImpact,
+    deptTotals,deptEstTotal,deptLogTotal,deptUtil,
+    rawDeptTotals,rawDeptEstTotal,rawDeptLogTotal,
     subtaskGroups,
     bugStats,    allBugsTotal:   allBugsByType.length,    bugsRaw:   allBugsByType,
     polishStats, allPolishTotal: allPolishByType.length,  polishRaw: allPolishByType,
@@ -1720,6 +1795,7 @@ function render(d){
   }
   // Render subtasks data (used across pages)
   if(typeof doSubtasks === 'function') doSubtasks(d);
+  if(typeof doSidebarAlerts === 'function') doSidebarAlerts(d);
   // Bind outliner scroll-spy now that #mc exists
   initOutlinerScrollSpy();
   bindScrollProgress();
@@ -1772,7 +1848,7 @@ function shell(){
   +    '<div class="nv-donut sm"><canvas id="scD"></canvas><div class="nv-donut-c" id="scDc"></div></div>'
   +    '<div class="nv-chips" id="ovScopeChips"></div>'
   +  '</div>'
-  +  '<div class="nv-card nv-ov-card">'
+  +  '<div class="nv-card nv-ov-card mh-clickable" onclick="nvMissingHoursDetail()">'
   +    '<div class="nv-hd"><span class="nv-card-t">Missing Hours</span></div>'
   +    '<div class="nv-mh-total" id="ovMissTotal"></div>'
   +    '<div class="nv-mh-list" id="ovMissList"></div>'
@@ -1903,10 +1979,10 @@ function doOverview(d){
   // Status grid
   var rem=Math.max(0,(d.dTot||0)-(d.dDone||0));
   var sg=[
-    {l:'Original Est.',v:rnd(d.totEst)+' hrs',c:'blue', s:'Planned workload'},
-    {l:'Total Logged', v:rnd(d.totLog)+' hrs',c:'green',s:'Actual work done'},
+    {l:'Original Est.',v:fmtHours(d.totEst),c:'blue', s:'Planned workload'},
+    {l:'Total Logged', v:fmtHours(d.totLog),c:'green',s:'Actual work done'},
     {l:'Efficiency',   v:d.util+'%',          c:'amber',s:'Log vs estimate'},
-    {l:'Extra Hours',  v:rnd(d.unplannedEst)+' hrs',c:'amber',s:'Added later'},
+    {l:'Extra Hours',  v:fmtHours(d.unplannedEst),c:'amber',s:'Added later'},
     {l:'Days Left',    v:rem+'D',             c:'coral',s:'To sprint end'},
     {l:'Unplanned',    v:d.unplannedCount+'', c:'coral',s:'Tasks added'}
   ];
@@ -1952,7 +2028,7 @@ function doMissingHours(d){
     return {n:a.n, supposed:rnd(supposed), logged:rnd(logged), miss:rnd(logged-supposed)};
   });
   var supposedTotal=rnd(rows.reduce(function(s,r){return s+r.supposed;},0));
-  var under=rows.filter(function(r){return r.miss<0;}).sort(function(x,y){return x.miss-y.miss;}).slice(0,3);
+  var under=rows.filter(function(r){return r.miss<0;}).sort(function(x,y){return x.miss-y.miss;});
   if(footEl) footEl.innerHTML='<span class="nv-chip"><span class="n" style="background:#f5a623">'+supposedTotal+'</span>Supposed logged hrs</span>';
   if(!under.length){
     if(totEl) totEl.textContent='0 hrs';
@@ -1987,12 +2063,136 @@ function nvDetail(title, sub, html){
 function nvCloseDetail(){ var m=document.getElementById('nvDetailModal'); if(m) m.classList.remove('open'); }
 document.addEventListener('keydown', function(e){ if(e.key==='Escape') nvCloseDetail(); });
 
+function nvMissingHoursDetail(){
+  var d=window._sprintData; if(!d) return;
+  var cap=d.teamCapacity||{}, dDone=d.dDone||0;
+  var active=(d.assignees||[]).filter(function(a){ return a.n!=='Unassigned' && a.tot>0; });
+  var rows=active.map(function(a){
+    var perDay=(cap[a.n]&&cap[a.n].hours>0)?cap[a.n].hours:6;
+    var supposed=perDay*dDone;
+    var logged=a.log||0;
+    var miss=logged-supposed;
+    return {n:a.n, team:a.team||'', supposed:supposed, logged:logged, miss:miss};
+  }).filter(function(r){ return r.miss<0; }).sort(function(x,y){ return x.miss-y.miss; });
+
+  var supposedTotal=rnd(rows.reduce(function(s,r){ return s+r.supposed; },0));
+  var missTotal=rnd(rows.reduce(function(s,r){ return s+r.miss; },0));
+  var sub = rows.length ? (rows.length+' person(s) short · '+Math.abs(missTotal)+' hrs missing · '+supposedTotal+' hrs supposed') : 'Everyone is logging on target';
+
+  var html = rows.length ? rows.map(function(r){
+    var denom=r.logged+Math.abs(r.miss);
+    var p=denom>0?Math.round(r.logged/denom*100):0;
+    return '<div class="nv-dt-row">'
+      +'<div class="nv-dt-main"><div class="nv-dt-name">'+escHtml(r.n)+'</div>'
+      +(r.team?'<div class="nv-dt-sub">'+escHtml(r.team)+'</div>':'')
+      +'</div>'
+      +'<div class="nv-dt-meta" style="flex-direction:column;align-items:flex-end;gap:6px">'
+        +'<span class="nv-dt-hrs">'+rnd(r.logged)+' / '+rnd(r.supposed)+' h</span>'
+        +'<span class="badge red">'+rnd(r.miss)+' hrs</span>'
+        +'<div style="width:140px;height:5px;background:var(--sur2);border-radius:3px;overflow:hidden;display:flex">'
+          +'<i style="width:'+p+'%;background:#5b6ef5"></i>'
+          +'<i style="width:'+(100-p)+'%;background:#f05252"></i>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('') : '<div class="nv-dt-empty">No missing hours right now.</div>';
+
+  nvDetail('Missing Hours', sub, html);
+}
+
+function buildSidebarAlertRows(d){
+  var dDone = d && d.dDone ? d.dDone : 0;
+  var active = (d && d.assignees ? d.assignees : []).filter(function(a){ return a.n !== 'Unassigned' && a.tot > 0; });
+  return active.map(function(a){
+    var expected = 6 * dDone;
+    var logged = a.log || 0;
+    var miss = logged - expected;
+    return { n:a.n, team:a.team || '', expected:expected, logged:logged, miss:miss };
+  }).filter(function(r){ return r.miss < 0; }).sort(function(x,y){ return x.miss - y.miss; });
+}
+
+function doSidebarAlerts(d){
+  var panel = document.getElementById('sbAlerts');
+  var countEl = document.getElementById('sbAlertsCount');
+  var subEl = document.getElementById('sbAlertsSub');
+  var listEl = document.getElementById('sbAlertsList');
+  if(!panel || !countEl || !subEl || !listEl) return;
+
+  var rows = buildSidebarAlertRows(d);
+  var daysDone = d && d.dDone ? d.dDone : 0;
+  countEl.textContent = rows.length;
+  subEl.textContent = daysDone > 0
+    ? 'Expected 6 hrs/day × ' + daysDone + ' working day' + (daysDone === 1 ? '' : 's')
+    : 'Sprint has not started yet';
+
+  panel.onclick = rows.length ? function(){ nvSidebarAlertsDetail(); } : null;
+  panel.setAttribute('aria-disabled', rows.length ? 'false' : 'true');
+  panel.style.cursor = rows.length ? 'pointer' : 'default';
+
+  if(!rows.length){
+    listEl.innerHTML = '<div class="sb-alert-item"><div class="sb-alert-main"><div class="sb-alert-name">All caught up</div><div class="sb-alert-meta">No one is below the 6 hrs/day pace right now.</div></div></div>';
+    return;
+  }
+
+  listEl.innerHTML = rows.map(function(r){
+    var shortfall = Math.abs(r.miss);
+    return '<div class="sb-alert-item">'
+      + '<span class="sb-alert-dot"></span>'
+      + '<div class="sb-alert-main">'
+        + '<div class="sb-alert-name">' + escHtml(r.n) + '</div>'
+        + '<div class="sb-alert-meta">Expected 6 hrs/day · Logged ' + rnd(r.logged) + ' hrs</div>'
+      + '</div>'
+      + '<div class="sb-alert-miss">-' + rnd(shortfall) + ' hrs</div>'
+    + '</div>';
+  }).join('');
+}
+
+function nvSidebarAlertsDetail(){
+  var d = window._sprintData; if(!d) return;
+  var rows = buildSidebarAlertRows(d);
+  var daysDone = d && d.dDone ? d.dDone : 0;
+  var html = rows.length ? rows.map(function(r){
+    var shortfall = Math.abs(r.miss);
+    var progress = (r.expected + shortfall) > 0 ? Math.max(0, Math.min(100, Math.round(r.logged / (r.expected + shortfall) * 100))) : 0;
+    return '<div class="nv-dt-row">'
+      + '<div class="nv-dt-main">'
+        + '<div class="nv-dt-name">' + escHtml(r.n) + '</div>'
+        + (r.team ? '<div class="nv-dt-sub">' + escHtml(r.team) + '</div>' : '')
+      + '</div>'
+      + '<div class="nv-dt-meta" style="flex-direction:column;align-items:flex-end;gap:6px">'
+        + '<span class="nv-dt-hrs">Expected 6/day · Logged ' + rnd(r.logged) + ' h</span>'
+        + '<span class="badge red">Missing ' + rnd(shortfall) + ' h</span>'
+        + '<div style="width:160px;height:5px;background:var(--sur2);border-radius:3px;overflow:hidden;display:flex">'
+          + '<i style="width:' + progress + '%;background:#5b6ef5"></i>'
+          + '<i style="width:' + (100 - progress) + '%;background:#f05252"></i>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }).join('') : '<div class="nv-dt-empty">No one is below the 6 hrs/day pace right now.</div>';
+
+  nvDetail('Alerts', rows.length + ' person(s) behind · ' + daysDone + ' working day' + (daysDone === 1 ? '' : 's') + ' elapsed', html);
+}
+
 // Combined work-item list (leaf tasks + subtasks + bugs + polish), mirrors process()
 function nvAllItems(d){
   var subParents={};
   (d.subtasks||[]).forEach(function(s){ var p=(s.parentTask||'').trim(); if(p) subParents[p]=true; });
   var leaves=(d.tasks||[]).filter(function(t){ return !subParents[(t.taskName||'').trim()]; });
   return leaves.concat(d.subtasks||[]).concat(d.bugs||[]).concat(d.polish||[]);
+}
+function nvRawTaskItems(d){
+  return ((d&&d.tasks)||[]).concat((d&&d.subtasks)||[], (d&&d.bugs)||[], (d&&d.polish)||[]);
+}
+function nvTeamTaskCounts(d){
+  var counts = {};
+  nvRawTaskItems(d).forEach(function(t){
+    var team = (t.teamCategory||t.team||'').trim();
+    if(!team) return;
+    if(!counts[team]) counts[team] = {done:0,total:0};
+    counts[team].total++;
+    if(nvIsDone(t)) counts[team].done++;
+  });
+  return counts;
 }
 function nvIsDone(t){ return (t.status||'').trim()==='Done'; }
 function nvIsWip(t){ var s=(t.status||'').trim(); return s==='In Progress'||s==='In Review'||s==='Build Awaiting'; }
@@ -2048,15 +2248,28 @@ function nvScopeDetail(kind){
 }
 function nvPersonDetail(name){
   var d=window._sprintData; if(!d || !name) return;
-  var list=nvAllItems(d).filter(function(t){ return (t.assignee||'')===name; });
+  if(typeof openMemberDetail === 'function'){
+    openMemberDetail(name);
+    return;
+  }
+  var key = mmNormName(name);
+  var list=nvRawTaskItems(d).filter(function(t){ return mmNormName(t.assignee||t.asn||'')===key; });
   var done=list.filter(nvIsDone).length;
   nvDetail(name, done+'/'+list.length+' done', nvTaskRows(list));
 }
 function nvTeamDetail(name){
   var d=window._sprintData; if(!d || !name) return;
-  var list=nvAllItems(d).filter(function(t){ return (t.teamCategory||'')===name; });
+  var list = nvRawTaskItems(d).filter(function(t){ return (t.teamCategory||t.team||'') === name; });
+  var seen = {};
+  list = list.filter(function(t){
+    var key = [t.taskName||t.name||'', t.assignee||t.asn||'', t.status||'', t.parentTask||''].join('|');
+    if(seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
   var done=list.filter(nvIsDone).length;
-  nvDetail(name+' — team progress', done+'/'+list.length+' done', nvTaskRows(list));
+  var totalItems = list.length;
+  nvDetail(name+' — team progress', done+'/'+totalItems+' done', nvTaskRows(list));
 }
 
 /* ── SPRINT PROGRESS (demo design): day badges + clickable dept tiles ── */
@@ -2096,13 +2309,18 @@ function doSprintProgress(d){
   // clickable dept tiles
   var depts=document.getElementById('spDepts');
   if(depts){
+    var deptLookup = {};
+    ((d.rawDeptTotals&&d.rawDeptTotals.length?d.rawDeptTotals:d.deptTotals)||[]).forEach(function(x){ deptLookup[x.n] = x; });
+    var teamCountLookup = nvTeamTaskCounts(d);
     depts.innerHTML=(d.teams||[]).map(function(t){
-      var tp=pc(t.done,t.tot);
+      var roll = deptLookup[t.n] || {est:0,log:0};
+      var counts = teamCountLookup[t.n] || {done:t.done||0,total:t.tot||0};
+      var tp=pc(counts.done,counts.total);
       var col=tp>=80?'var(--grn)':(tp>=50?'var(--amb)':'var(--red)');
       return '<div class="nv-dept" onclick="nvTeamDetail(\''+escAttr(t.n)+'\')" title="Click to see '+escAttr(t.n)+' tasks">'
         +'<div class="top"><span class="nm">'+escHtml(t.n)+'</span><span class="pc" style="color:'+col+'">'+tp+'%</span></div>'
         +'<div class="tr"><i style="width:'+tp+'%;background:'+col+'"></i></div>'
-        +'<div class="mt">'+t.done+'/'+t.tot+' done · '+rnd(t.log||0)+'/'+rnd(t.est||0)+' hrs</div></div>';
+        +'<div class="mt">'+counts.done+'/'+counts.total+' done · '+rnd(roll.log||0)+'/'+rnd(roll.est||0)+' hrs</div></div>';
     }).join('') || '<div class="nv-dt-empty">No team data.</div>';
   }
 }
@@ -2455,14 +2673,20 @@ function doTeamDemo(d){
     });
   }
 
-  // Individual chart (assignees, filtered by team)
-  var asn=(d.assignees||[]).filter(function(a){return a.n!=='Unassigned' && (a.est>0||a.log>0);});
-  if(window._tmFilter!=='All') asn=asn.filter(function(a){return a.team===window._tmFilter;});
-  asn=asn.slice().sort(function(a,b){return (b.est||0)-(a.est||0);});
-  var labels=asn.map(function(a){return a.n;});
-  var est=asn.map(function(a){return rnd(a.est);});
-  var log=asn.map(function(a){return rnd(a.log);});
-  var logCol=asn.map(function(a){return (a.log>a.est)?COL.red:COL.green;});
+  // Chart data:
+  // - All = raw department totals from every task row in Sheets
+  // - specific team = assignee totals inside that team
+  var rows;
+  if(window._tmFilter==='All'){
+    rows=((d.rawDeptTotals&&d.rawDeptTotals.length?d.rawDeptTotals:d.deptTotals)||[]).filter(function(t){ return t.n && (t.est>0 || t.log>0); }).slice();
+  } else {
+    rows=(d.assignees||[]).filter(function(a){ return a.n!=='Unassigned' && a.team===window._tmFilter && (a.est>0||a.log>0); }).slice();
+  }
+  rows.sort(function(a,b){ return (b.est||0)-(a.est||0); });
+  var labels=rows.map(function(r){ return r.n; });
+  var est=rows.map(function(r){ return rnd(r.est); });
+  var log=rows.map(function(r){ return rnd(r.log); });
+  var logCol=rows.map(function(r){ return (r.log>r.est)?COL.red:COL.green; });
   if(CH.indv) CH.indv.destroy();
   var ce=document.getElementById('indvC');
   if(ce){
@@ -2475,9 +2699,41 @@ function doTeamDemo(d){
           {label:'Logged',  data:log,backgroundColor:logCol,borderRadius:3,barThickness:11}
         ]},
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-          onClick:function(evt,els){ if(els&&els.length){ var a=asn[els[0].index]; if(a) nvPersonDetail(a.n); } },
+          onClick:function(evt,els,chart){
+            chart = chart || CH.indv;
+            if(!chart) return;
+            var canvas = chart.canvas || ce;
+            var yScale = chart.scales ? (chart.scales.y || chart.scales['y-axis-0']) : null;
+            if(!canvas || !yScale) return;
+            var rect = canvas.getBoundingClientRect();
+            var nativeEvt = evt.native || evt;
+            var mouseY = (typeof nativeEvt.offsetY === 'number') ? nativeEvt.offsetY : ((nativeEvt.clientY || 0) - rect.top);
+            var idx = -1;
+            if(typeof yScale.getValueForPixel === 'function'){
+              idx = Math.round(yScale.getValueForPixel(mouseY));
+            }
+            if(idx == null || idx < 0 || idx >= labels.length){
+              var minDist = Infinity;
+              for(var i=0;i<labels.length;i++){
+                var py = yScale.getPixelForValue(i);
+                var dist = Math.abs(mouseY - py);
+                if(dist < minDist){ minDist = dist; idx = i; }
+              }
+            }
+            if(idx == null || idx < 0) return;
+            var clickedName = labels[idx] || (chart.data && chart.data.labels ? chart.data.labels[idx] : '');
+            if(!clickedName) return;
+            if(window._tmFilter !== 'All'){
+              nvPersonDetail(clickedName);
+              return;
+            }
+            var r = rows.filter(function(row){ return row.n === clickedName; })[0] || rows[idx];
+            if(!r) return;
+            var isTeamLabel = (d.teams||[]).some(function(t){ return t.n === r.n; });
+            if(isTeamLabel) nvTeamDetail(r.n); else nvPersonDetail(r.n);
+          },
           onHover:function(evt,els){ if(evt.native) evt.native.target.style.cursor=els.length?'pointer':'default'; },
-          plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return '  '+ctx.dataset.label+': '+ctx.parsed.x+' hrs';},afterBody:function(){return '\nClick for task breakdown';}}}},
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return '  '+ctx.dataset.label+': '+ctx.parsed.x+' hrs';},afterBody:function(){return window._tmFilter==='All'?'\nClick for team breakdown':'\nClick for task breakdown';}}}},
           scales:{x:{beginAtZero:true,grid:{color:c.grid},ticks:{color:c.text,font:{size:10}}},
             y:{grid:{display:false},ticks:{color:c.text,font:{family:'Space Grotesk',weight:'700',size:10}}}}}});
     } else {
@@ -2500,15 +2756,16 @@ function doTeamDemo(d){
 
   // Stat tiles
   var hi=d.healthImpact||0;
+  var teamPlanNote = 'Sprint estimate: ' + fmtHours(d.totEst) + ' · Department rollup used by the All teams: ' + fmtHours(d.rawDeptEstTotal != null ? d.rawDeptEstTotal : (d.deptEstTotal != null ? d.deptEstTotal : d.totEst));
   var stats=[
     {v:d.unplannedCount+'',        l:'Unplanned tasks added',    c:'#f05252'},
-    {v:rnd(d.unplannedEst)+' hrs',  l:'Extra hours (unplanned)',  c:'#f5a623'},
-    {v:rnd(d.plannedEst)+' hrs',    l:'Originally planned hours',  c:'#9b72f5'},
+    {v:fmtHours(d.unplannedEst),    l:'Extra hours (unplanned)',  c:'#f5a623'},
+    {v:fmtHours(d.plannedEst != null ? d.plannedEst : d.totEst),    l:'Originally planned hours',  c:'#9b72f5', sub:teamPlanNote},
     {v:hi+'%',                      l:'Sprint health impact',     c:(hi<=10?'#18c97a':(hi<=20?'#f5a623':'#f05252'))}
   ];
   var stEl=document.getElementById('tmStats');
   if(stEl) stEl.innerHTML=stats.map(function(s){
-    return '<div class="nv-stat-tile"><span class="num" style="color:'+s.c+'">'+s.v+'</span><span class="lab">'+s.l+'</span></div>';
+    return '<div class="nv-stat-tile"><span class="num" style="color:'+s.c+'">'+s.v+'</span><div><div class="lab">'+s.l+'</div>'+(s.sub?'<div style="font-size:9px;color:var(--mut);margin-top:4px;line-height:1.4">'+s.sub+'</div>':'')+'</div></div>';
   }).join('');
 
   // Unplanned bar
@@ -3835,10 +4092,15 @@ function openMemberDetail(name){
   var buckets = buildMemberBuckets(d);
   var a = buckets[name];
   if(!a){
+    var wanted = mmNormName(name);
+    var matchKey = Object.keys(buckets).filter(function(k){ return mmNormName(k) === wanted; })[0];
+    if(matchKey) a = buckets[matchKey];
+  }
+  if(!a){
     alert('No tasks found for: ' + name);
     return;
   }
-  window._mmCurrentMember = name;
+  window._mmCurrentMember = a.name;
   _mmStatusFilter = 'All';
   renderMemberDetail(a, d);
   document.getElementById('memberModal').classList.add('on');
@@ -4081,7 +4343,13 @@ function setMmFilter(f){
   _mmStatusFilter = f;
   var d = window._sprintData;
   if(!d || !window._mmCurrentMember) return;
-  var a = buildMemberBuckets(d)[window._mmCurrentMember];
+  var buckets = buildMemberBuckets(d);
+  var a = buckets[window._mmCurrentMember];
+  if(!a){
+    var wanted = mmNormName(window._mmCurrentMember);
+    var matchKey = Object.keys(buckets).filter(function(k){ return mmNormName(k) === wanted; })[0];
+    if(matchKey) a = buckets[matchKey];
+  }
   if(a) renderMemberDetail(a, d);
 }
 
