@@ -732,8 +732,7 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
 /* expected hours: missing + surplus */
 .nv-ov-card.mh-clickable{cursor:pointer;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
 .nv-ov-card.mh-clickable:hover{transform:translateY(-1px);border-color:rgba(91,110,245,.35);box-shadow:0 8px 24px rgba(91,110,245,.12)}
-.nv-mh-total{position:absolute;top:37px;right:17px;font-family:var(--font-mono);font-weight:700;font-size:11px;color:var(--red);white-space:nowrap;z-index:2}
-.nv-mh-list{position:absolute;top:62px;left:0;right:0;bottom:42px;overflow-y:auto;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--bor) transparent}
+.nv-mh-list{position:absolute;top:46px;left:0;right:0;bottom:42px;overflow-y:auto;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--bor) transparent}
 .nv-mh-list::-webkit-scrollbar{width:8px}
 .nv-mh-list::-webkit-scrollbar-track{background:transparent}
 .nv-mh-list::-webkit-scrollbar-thumb{background:var(--bor);border-radius:8px}
@@ -744,7 +743,6 @@ select{background:var(--sur);color:var(--text);border:0.5px solid var(--bor);bor
 .nv-mh.surplus .vl{color:var(--grn)}
 .nv-mh-section{position:absolute;left:18px;right:18px;height:18px;font-size:9px;font-weight:700;letter-spacing:.45px;text-transform:uppercase;color:var(--mut)}
 .nv-mh-section.surplus{color:var(--grn)}
-.nv-mh-total .surplus{color:var(--grn);margin-left:6px}
 .nv-mh .bar{position:absolute;top:21px;left:0;right:0;height:5px;background:var(--sur2);border-radius:3px;overflow:hidden;display:flex}
 .nv-mh .bar i{height:100%;display:block}
 .nv-mh-foot{position:absolute;bottom:16px;left:0;right:0;display:flex;justify-content:center}
@@ -1047,6 +1045,23 @@ function pd(str){
 }
 function trunc(s,n){return s&&s.length>n?s.slice(0,n)+'…':s||'';}
 
+// Working days in a sprint, using the same rule as dTot:
+// start date is D0 (planning) and is NOT counted; D1..DN are the
+// weekdays after it, up to and including the end date.
+function sprintWorkingDayCount(start, end){
+  if(!start||!end) return 0;
+  var cur=new Date(start.getFullYear(),start.getMonth(),start.getDate());
+  var last=new Date(end.getFullYear(),end.getMonth(),end.getDate());
+  var count=0;
+  cur.setDate(cur.getDate()+1);
+  while(cur<=last){
+    var w=cur.getDay();
+    if(w!==0&&w!==6) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return count;
+}
+
 // Leave records stay separate from Asana time logs.
 function normPersonName(name){
   return String(name||'').trim().toLowerCase().replace(/\s+/g,' ');
@@ -1073,13 +1088,23 @@ function isValidLeaveDate(value, sprintStart, sprintEnd){
   return date>start && date<=end && weekday!==0 && weekday!==6;
 }
 function leaveCountsNow(record, sprintStart, sprintEnd){
-  var date=leaveDateFromISO(leaveDateValue(record));
-  var today=new Date();
-  today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+  var value = leaveDateValue(record);
 
-  return isValidLeaveDate(leaveDateValue(record),sprintStart,sprintEnd) && date<=today;
+  if(!isValidLeaveDate(value, sprintStart, sprintEnd))
+    return false;
+
+  var leaveDate = leaveDateFromISO(value);
+
+  var today = new Date();
+  today = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  // Credit only on or after the actual leave date.
+  return leaveDate <= today;
 }
-
 Chart.defaults.font.family='system-ui,-apple-system,sans-serif';
 Chart.defaults.plugins.tooltip.backgroundColor='rgba(17,20,36,.92)';
 Chart.defaults.plugins.tooltip.titleColor='#fff';
@@ -1380,6 +1405,9 @@ function process(json,spId){
 // A leave day is not written into Asana. It is dashboard-only credit.
 var leaveCreditHours = 0, appliedLeaves = [], seenLeaveDays = {};
 var leaveSprintStart = pd(spInfo.start), leaveSprintEnd = pd(spInfo.end);
+// A leave day is credited at the person's own planned daily rate
+// (their estimate / sprint working days), matching the expected-hours rule.
+var leaveSprintDays = Math.max(1, sprintWorkingDayCount(leaveSprintStart, leaveSprintEnd));
 
 leaveRecords.forEach(function(leave){
   var date = leaveDateValue(leave);
@@ -1398,7 +1426,7 @@ leaveRecords.forEach(function(leave){
 
   var person = amap[matchedName];
   var team = person.team || leave.team || '';
-  var hours = 6;
+  var hours = (person.est || 0) / leaveSprintDays;
 
   person.log += hours;
   person.leaveHours = (person.leaveHours || 0) + hours;
@@ -1969,7 +1997,6 @@ function shell(){
   +  '</div>'
   +  '<div class="nv-card nv-ov-card mh-clickable" onclick="nvMissingHoursDetail()">'
   +    '<div class="nv-hd"><span class="nv-card-t">Expected Hours</span></div>'
-  +    '<div class="nv-mh-total" id="ovMissTotal"></div>'
   +    '<div class="nv-mh-list" id="ovMissList"></div>'
   +    '<div class="nv-mh-foot" id="ovMissFoot"></div>'
   +  '</div>'
@@ -2099,6 +2126,25 @@ function completedSprintDaysForAlerts(d){
   // progress the expected-hours alert compares logs against D1 only.
   return d && typeof d.dDone === 'number' ? d.dDone : 0;
 }
+// ── Expected-hours rule ──
+// A person's target is their own estimate spread evenly across the
+// sprint's working days — not a flat 6h/day for everyone.
+//   dailyRate = est / dTot
+//   expected  = dailyRate * dDone   (dDone = fully elapsed working days)
+function personDailyRate(a, d){
+  if(!a || !d) return 0;
+  var days = d.dTot || 0;
+  if(days <= 0) return 0;
+  return (a.est || 0) / days;
+}
+function personExpected(a, d){
+  return personDailyRate(a, d) * completedSprintDaysForAlerts(d);
+}
+// People with tasks but no estimate have no target to measure against —
+// leaving them in would show every logged hour as fake "surplus".
+function hasExpectedTarget(a){
+  return !!a && a.n !== 'Unassigned' && a.tot > 0 && (a.est || 0) > 0;
+}
 function expectedHoursWaitingText(d){
   var start=pd(d&&d.startDate);
   var today=new Date();
@@ -2178,30 +2224,24 @@ function doOverview(d){
 
 function doMissingHours(d){
   var listEl=document.getElementById('ovMissList');
-  var totEl =document.getElementById('ovMissTotal');
   var footEl=document.getElementById('ovMissFoot');
   if(!listEl) return;
   var expectedDays=completedSprintDaysForAlerts(d);
   if(expectedDays<=0){
-    if(totEl) totEl.textContent='0 hrs';
     if(footEl) footEl.innerHTML='<span class="nv-chip"><span class="n" style="background:#f5a623">0</span>Supposed logged hrs</span>';
     listEl.innerHTML='<div class="nv-mh-empty">'+expectedHoursWaitingText(d)+'. The active day will be evaluated on the next working day.</div>';
     return;
   }
-  var active=(d.assignees||[]).filter(function(a){return a.n!=='Unassigned'&&a.tot>0;});
+  var active=(d.assignees||[]).filter(hasExpectedTarget);
   var rows=active.map(function(a){
-    var supposed=6*expectedDays, logged=a.log||0;
+    var supposed=personExpected(a, d), logged=a.log||0;
     return {n:a.n, supposed:rnd(supposed), logged:rnd(logged), miss:rnd(logged-supposed)};
   });
   var supposedTotal=rnd(rows.reduce(function(s,r){return s+r.supposed;},0));
   var under=rows.filter(function(r){return r.miss<0;}).sort(function(x,y){return x.miss-y.miss;});
   var over=rows.filter(function(r){return r.miss>0;}).sort(function(x,y){return y.miss-x.miss;});
   if(footEl) footEl.innerHTML='<span class="nv-chip"><span class="n" style="background:#f5a623">'+supposedTotal+'</span>Supposed logged hrs</span>';
-  var totMiss=rnd(under.reduce(function(s,r){return s+r.miss;},0));
-  var totSurplus=rnd(over.reduce(function(s,r){return s+r.miss;},0));
-  if(totEl) totEl.innerHTML='<span>'+totMiss+' hrs</span>'+(totSurplus>0?'<span class="surplus">+'+totSurplus+' hrs</span>':'');
   if(!under.length && !over.length){
-    if(totEl) totEl.textContent='0 hrs';
     listEl.innerHTML='<div class="nv-mh-empty">Everyone is logging exactly on target.</div>';
     return;
   }
@@ -2249,12 +2289,12 @@ function nvMissingHoursDetail(){
       '<div class="nv-dt-empty">The active day is not evaluated until the next working day.</div>');
     return;
   }
-  var active=(d.assignees||[]).filter(function(a){ return a.n!=='Unassigned' && a.tot>0; });
+  var active=(d.assignees||[]).filter(hasExpectedTarget);
   var allRows=active.map(function(a){
-    var supposed=6*expectedDays;
+    var supposed=personExpected(a, d);
     var logged=a.log||0;
     var miss=logged-supposed;
-    return {n:a.n, team:a.team||'', supposed:supposed, logged:logged, miss:miss};
+    return {n:a.n, team:a.team||'', rate:personDailyRate(a, d), supposed:supposed, logged:logged, miss:miss};
   });
   var under=allRows.filter(function(r){ return r.miss<0; }).sort(function(x,y){ return x.miss-y.miss; });
   var over=allRows.filter(function(r){ return r.miss>0; }).sort(function(x,y){ return y.miss-x.miss; });
@@ -2289,12 +2329,12 @@ function nvMissingHoursDetail(){
 
 function buildSidebarAlertRows(d){
   var expectedDays = completedSprintDaysForAlerts(d);
-  var active = (d && d.assignees ? d.assignees : []).filter(function(a){ return a.n !== 'Unassigned' && a.tot > 0; });
+  var active = (d && d.assignees ? d.assignees : []).filter(hasExpectedTarget);
   return active.map(function(a){
-    var expected = 6 * expectedDays;
+    var expected = personExpected(a, d);
     var logged = Math.min(a.log || 0, expected);
     var miss = logged - expected;
-    return { n:a.n, team:a.team || '', expected:expected, logged:logged, miss:miss };
+    return { n:a.n, team:a.team || '', rate:personDailyRate(a, d), expected:expected, logged:logged, miss:miss };
   }).filter(function(r){ return r.miss < 0; }).sort(function(x,y){ return x.miss - y.miss; });
 }
 
@@ -2351,7 +2391,7 @@ function nvSidebarAlertsDetail(){
         + (r.team ? '<div class="nv-dt-sub">' + escHtml(r.team) + '</div>' : '')
       + '</div>'
       + '<div class="nv-dt-meta" style="flex-direction:column;align-items:flex-end;gap:6px">'
-        + '<span class="nv-dt-hrs">Expected 6/day · Logged ' + rnd(r.logged) + 'h/' + rnd(r.expected) + '</span>'
+        + '<span class="nv-dt-hrs">Expected ' + rnd(r.rate) + '/day · Logged ' + rnd(r.logged) + 'h/' + rnd(r.expected) + '</span>'
         + '<span class="badge red">Missing ' + rnd(shortfall) + ' h</span>'
         + '<div style="width:160px;height:5px;background:var(--sur2);border-radius:3px;overflow:hidden;display:flex">'
           + '<i style="width:' + progress + '%;background:#5b6ef5"></i>'
@@ -4782,75 +4822,6 @@ function previewLeaveMatch(){
   }
 }
 
-function doLeavePage(d){
-  var el=document.getElementById('leavePage');
-  if(!el) return;
-
-  var start=pd(d.startDate);
-  var end=pd(d.endDate);
-  var minDate=start ? new Date(start.getFullYear(),start.getMonth(),start.getDate()+1) : null;
-
-  var defaultDate=leaveISODate(new Date());
-  if(minDate && defaultDate<leaveISODate(minDate)) defaultDate=leaveISODate(minDate);
-  if(end && defaultDate>leaveISODate(end)) defaultDate=leaveISODate(end);
-
-  var names=(d.assignees||[])
-    .filter(function(a){return a.n!=='Unassigned'&&a.tot>0;})
-    .slice()
-    .sort(function(a,b){return a.n.localeCompare(b.n);});
-
-  var records=(d.leaveRecords||[])
-    .slice()
-    .sort(function(a,b){return leaveDateValue(b).localeCompare(leaveDateValue(a));});
-
-  el.innerHTML='<div class="cc">'
-    +'<div class="cc-t">Add leave day</div>'
-    +'<div class="cc-s">Enter one approved weekday. The dashboard credits 6 hours to the matched member, removes those hours from missing-hours exposure, and adds them to Extra Hours.</div>'
-    +'<div class="user-form">'
-      +'<input class="user-input" id="leaveName" list="leaveAssigneeList" placeholder="Full name" oninput="previewLeaveMatch()">'
-      +'<datalist id="leaveAssigneeList">'
-        +names.map(function(a){
-          return '<option value="'+escAttr(a.n)+'">'+escHtml(a.team||'')+'</option>';
-        }).join('')
-      +'</datalist>'
-      +'<input type="date" class="user-input" id="leaveDate" value="'+defaultDate+'"'
-        +(minDate?' min="'+leaveISODate(minDate)+'"':'')
-        +(end?' max="'+leaveISODate(end)+'"':'')
-        +' style="max-width:175px">'
-      +'<button class="btn btn-acc" id="saveLeaveBtn" onclick="saveLeaveDay()">Add leave</button>'
-    +'</div>'
-    +'<div id="leaveMatchStatus" style="font-size:11px;margin-top:8px;color:var(--mut)"></div>'
-    +'</div>';
-
-  el.innerHTML+='<div class="cc">'
-    +'<div class="cc-t">Leave days in '+escHtml(d.spInfo.id||cur||'this sprint')+'</div>'
-    +'<div class="cc-s">'+records.length+' record(s) · '+rnd(d.leaveCreditHours||0)+' credited hour(s) included in dashboard totals.</div>'
-    +(records.length
-      ? '<div style="overflow-x:auto"><table class="user-table"><thead><tr><th>Date</th><th>Full name</th><th>Department</th><th>Associated tasks</th><th>Hours</th><th>Status</th><th></th></tr></thead><tbody>'
-        +records.map(function(r){
-          var match=leaveAssigneeMatch(d,r.fullName||r.assignee||r.name);
-          var date=leaveDateValue(r);
-          var credited=leaveCountsNow(r,d.spStart,d.spEnd);
-          var team=r.team||(match&&match.team)||'—';
-          var tasks=(r.taskCount!=null?r.taskCount:(match?match.tot:0));
-          var id=r.id||r.leaveId||'';
-
-          return '<tr>'
-            +'<td>'+escHtml(date)+'</td>'
-            +'<td>'+escHtml(r.fullName||r.assignee||r.name||'—')+'</td>'
-            +'<td>'+escHtml(team)+'</td>'
-            +'<td>'+tasks+'</td>'
-            +'<td>6 h</td>'
-            +'<td><span class="badge '+(credited?'grn':'amb')+'">'+(credited?'Credited':'Scheduled')+'</span></td>'
-            +'<td style="text-align:right">'
-              +(id?'<button class="btn" style="color:var(--red);border-color:rgba(240,82,82,.3)" onclick="deleteLeaveDay(\''+escAttr(id)+'\')">Del</button>':'')
-            +'</td>'
-          +'</tr>';
-        }).join('')
-        +'</tbody></table></div>'
-      : '<div class="empty" style="margin-top:14px">No leave recorded for this sprint.</div>')
-    +'</div>';
-}
 
 function leaveRecordName(r){
   return r && (r.fullName || r.assignee || r.name || r.person || r.member || '');
@@ -4860,7 +4831,6 @@ function leaveRowStatus(d, r){
   var date=leaveDateValue(r);
   if(!leaveAssigneeMatch(d,leaveRecordName(r))) return {label:'No Match', cls:'red', reason:'Person is not active in this sprint', applied:false};
   if(!isValidLeaveDate(date,d.spStart,d.spEnd)) return {label:'Invalid', cls:'red', reason:'Not a sprint workday after D0', applied:false};
-  if(!leaveCountsNow(r,d.spStart,d.spEnd)) return {label:'Scheduled', cls:'amb', reason:'Not credited yet', applied:false};
   return {label:'Credited', cls:'grn', reason:'6h applied', applied:true};
 }
 
@@ -5044,7 +5014,7 @@ async function saveLeaveDay(){
       throw new Error(json.message||json.error||'Leave could not be saved');
     }
 
-    init();
+    init(cur);
   }catch(err){
     msg.textContent='Save failed: '+err.message;
     msg.style.color='var(--red)';
@@ -5070,7 +5040,7 @@ async function deleteLeaveDay(id){
       throw new Error(json.message||json.error||'Leave could not be deleted');
     }
 
-    init();
+    init(cur);
   }catch(err){
     alert('Delete failed: '+err.message);
   }
@@ -5255,7 +5225,7 @@ function getNextSyncTime(){
 }
 
 /* ── INIT ── */
-function init(){
+function init(preserveSprint){
   TEAM_COLORS={};
   document.getElementById('mc').innerHTML='<div class="loading"><div class="spin"></div><p>Loading data from Google Sheets...</p></div>';
   fetchData()
@@ -5283,7 +5253,12 @@ function init(){
         o.value=s.id; o.textContent=s.id+' · '+s.start+' – '+s.end;
         sel.appendChild(o);
       });
-      cur=sps[0].id; sel.value=cur; curTeam='All';
+      if(preserveSprint && sps.some(function(s){return s.id===preserveSprint;})){
+        cur=preserveSprint;
+      } else {
+        cur=sps[0].id;
+      }
+      sel.value=cur; curTeam='All';
       render(process(raw,cur));
     })
     .catch(function(e){
