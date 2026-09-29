@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Dashboard — PS MSS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Version of the dashboard files. Change it (here and in every ?v= below) after
+     editing any .js/.css so browsers load the new files instead of old cached ones. -->
+<script>var DASH_VERSION='20260929-30';</script>
+<link rel="stylesheet" id="coreCss" href="core/core.css?v=20260929-30">
+<!-- the selected space's spaces/<name>/space.css is inserted here -->
+<link rel="stylesheet" href="reports/reports.css?v=20260929-30">
+<link rel="stylesheet" href="admin/admin.css?v=20260929-30">
+<link rel="stylesheet" href="live-view/live-view.css?v=20260929-30">
+</head>
+<body>
+<div class="d" id="root">
+
+<!-- LOGIN GATE -->
+<div class="login-wrap" id="loginScreen" style="display:none">
+  <div class="login-card">
+    <div class="login-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <div class="login-title">Sprint Dashboard Access</div>
+    <div class="login-sub">Enter your work email to continue.<br>Only whitelisted users can view this dashboard.</div>
+    <input type="email" class="login-input" id="loginEmail" placeholder="yourname@playspare.com" autofocus>
+    <!-- Team access key PAUSED — email-only login. To re-enable: remove display:none below,
+         restore the !token check in the loginBtn handler, and re-add user.token in bootstrap(). -->
+    <input type="password" class="login-input" id="loginToken" placeholder="Team access key" autocomplete="current-password" style="margin-top:10px;display:none">
+    <button class="login-btn" id="loginBtn">Continue</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD with SIDEBAR -->
+<div class="app-shell" id="dashboardView" style="display:none">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></div>
+      <div class="sb-brand">
+        <div class="sb-title">Playspare</div>
+        <div class="sb-sub">Sprint Dashboard</div>
+      </div>
+    </div>
+    <!-- Collapse / expand the sidebar (arrow flips when collapsed) -->
+    <button class="sb-toggle" id="sbToggle" onclick="toggleSidebar()" title="Collapse sidebar" aria-label="Collapse sidebar"><svg class="icn" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+
+    <nav class="sb-nav">
+      <span class="sb-indicator" id="sbIndicator" aria-hidden="true"></span>
+      <div class="sb-group">Spaces</div>
+      <a class="sb-item" data-space="MMS" data-label="My Mall Simulator" title="My Mall Simulator (MMS)"><span class="sb-icon"><svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span><span class="sb-label">My Mall Simulator</span></a>
+      <a class="sb-item" data-space="MSSD" data-label="My Supermarket Simulator- Delivery" title="My Supermarket Simulator- Delivery (MSSD)"><span class="sb-icon"><svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></svg></span><span class="sb-label">My Supermarket Simulator- Delivery</span></a>
+      <a class="sb-item" data-space="MSSDISC" data-label="MSS - Discovery" title="MSS - Discovery (MSSDISC)"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></span><span class="sb-label">MSS - Discovery</span></a>
+      <a class="sb-item" data-space="MDP" data-label="My discovery project" title="My discovery project (MDP)"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></span><span class="sb-label">My discovery project</span></a>
+
+      <div class="sb-group sb-bottom-start">Reports</div>
+      <a class="sb-item" data-page="live" data-label="MMS Live View"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/><circle cx="19" cy="7" r="1.5"/></svg></span><span class="sb-label">MMS Live View</span></a>
+      <a class="sb-item" data-page="spillovers" data-label="Spillovers"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg></span><span class="sb-label">Spillovers</span></a>
+      <a class="sb-item" data-page="performance" data-label="Performance"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span><span class="sb-label">Performance</span></a>
+      <a class="sb-item" data-page="ideas" data-label="Ideas list"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="sb-label">Ideas list</span></a>
+      <a class="sb-item" data-page="leave" data-label="Leave"><span class="sb-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg></span><span class="sb-label">Leave</span></a>
+
+      <div class="sb-group">Admin</div>
+      <a class="sb-item" data-page="users" data-label="Users" id="nav-users"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="sb-label">Users</span></a>
+      <a class="sb-item" data-page="settings" data-label="Settings"><span class="sb-icon"><svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="sb-label">Settings</span></a>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar" id="userAvatar">U</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="userName">User</div>
+          <div class="sb-user-role" id="userRole">Viewer</div>
+        </div>
+      </div>
+      <button class="sb-logout" onclick="logoutUser()" title="Logout"><svg class="icn" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg></button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-area">
+    <div class="main-topbar">
+      <button class="hamburger" onclick="toggleSidebar()" title="Toggle sidebar"><svg class="icn icn-lg" viewBox="0 0 24 24"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+      <div class="page-title-wrap">
+        <div class="page-title-copy">
+          <div class="page-title" id="pageTitle">Overview</div>
+          <div class="page-sub" id="pageSub">Sprint performance at a glance</div>
+        </div>
+        <div class="header-countdown" id="headerCountdown" style="visibility:hidden">
+          <div class="nv-cd sm" id="ovCd"></div>
+        </div>
+      </div>
+      <div class="main-actions">
+        <div class="sync-pill" id="syncPill" tabindex="0">
+          <span class="sync-dot"></span>
+          <span class="sync-pill-text" id="syncPillText">—</span>
+          <div class="sync-pop" id="syncPop">
+            <div class="sync-pop-row"><span>Dashboard loaded</span><b id="syncLoadTime">—</b></div>
+            <div class="sync-pop-row"><span>Sheet last synced</span><b id="syncSheetTime">—</b></div>
+            <div class="sync-pop-row"><span>Next auto-sync</span><b id="syncNextTime">—</b></div>
+          </div>
+        </div>
+        <select id="spSel" class="sprint-select"></select>
+        <button class="btn btn-acc" id="syncNowBtn" title="Pull the latest data from Jira for every space right now (skips the schedule)"><svg class="icn" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>Sync Now</button>
+        <button class="btn" id="snapBtn" title="Freeze the selected sprint into a snapshot using the latest Jira data. If it is already frozen, refresh it with the newest numbers (fixes an auto-freeze that fired during a holiday)."><svg class="icn" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Snapshot</button>
+        <button class="btn pdf-btn" id="pdfBtn"><svg class="icn" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>PDF</button>
+      </div>
+      <div class="scroll-progress" aria-hidden="true"><div class="scroll-progress-fill" id="scrollProgressFill"></div></div>
+    </div>
+
+    <!-- Primary tab row (demo design) -->
+    <div class="nv-tabs" id="nvTabs">
+      <div class="nv-tab on" data-page="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Overview</div>
+      <div class="nv-tab" data-page="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>Team</div>
+      <div class="nv-tab" data-page="retro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>Retrospective</div>
+    </div>
+
+    <div class="page-content" id="mc">
+      <div class="loading"><div class="dash-loader"><div class="dash-loader-top"><span class="dash-loader-title">Loading dashboard</span><span class="dash-loader-pct">0%</span></div><div class="dash-loader-track"><div class="dash-loader-fill"></div></div><div class="dash-loader-status">Connecting to dashboard data…</div></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- Member Task Detail Modal — INSIDE #root so it inherits theme CSS variables -->
+<div class="member-modal" id="memberModal" onclick="if(event.target===this)closeMemberModal()">
+  <div class="member-modal-card" id="memberModalCard">
+    <div class="member-modal-head">
+      <div class="mm-avatar" id="mmAvatar">?</div>
+      <div class="mm-id">
+        <div class="mm-name" id="mmName">—</div>
+        <div class="mm-meta" id="mmMeta">—</div>
+      </div>
+      <button class="mm-close" onclick="closeMemberModal()" title="Close">
+        <svg class="icn icn-lg" viewBox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="mm-stats" id="mmStats"></div>
+    <div class="mm-progress-row">
+      <div class="mm-progress-lead" id="mmProgressLead">0 of 0 done</div>
+      <div class="mm-progress">
+        <div class="mm-progress-fill done" id="mmProgressDone"></div>
+        <div class="mm-progress-fill active" id="mmProgressActive"></div>
+      </div>
+      <div class="mm-progress-meta" id="mmProgressMeta">0% · 0 in progress · 0 to do</div>
+    </div>
+    <div class="mm-filters" id="mmFilters"></div>
+    <div class="mm-body" id="mmBody"></div>
+  </div>
+</div>
+
+<!-- PDF Export Modal — INSIDE #root so it inherits theme CSS variables -->
+<div class="pdf-modal" id="pdfModal" onclick="if(event.target===this)closePdfModal()">
+  <div class="pdf-modal-card">
+    <div class="pdf-modal-title">Export Dashboard as PDF</div>
+    <div class="pdf-modal-sub">Choose what to include in the export. You will be taken to your browser's print dialog — select "Save as PDF" as the destination.</div>
+    <div class="pdf-opts">
+      <label class="pdf-opt">
+        <input type="radio" name="pdfScope" value="full" checked>
+        <div>
+          <div class="pdf-opt-title">Full Report</div>
+          <div class="pdf-opt-desc">Everything — KPIs, charts, bugs, subtasks, retro, performance</div>
+        </div>
+      </label>
+      <label class="pdf-opt">
+        <input type="radio" name="pdfScope" value="summary">
+        <div>
+          <div class="pdf-opt-title">Summary Only</div>
+          <div class="pdf-opt-desc">Score card + sprint progress + goal + performance scorecard</div>
+        </div>
+      </label>
+      <label class="pdf-opt">
+        <input type="radio" name="pdfScope" value="retro">
+        <div>
+          <div class="pdf-opt-title">Retrospective Only</div>
+          <div class="pdf-opt-desc">Sprint goal + retrospective sections (for sprint reviews)</div>
+        </div>
+      </label>
+    </div>
+    <div class="pdf-modal-actions">
+      <button class="btn" onclick="closePdfModal()">Cancel</button>
+      <button class="btn btn-acc" onclick="generatePDF()">Export</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reusable detail modal — opened by clicking charts / team tiles -->
+<div class="nv-detail-modal" id="nvDetailModal" onclick="if(event.target===this)nvCloseDetail()">
+  <div class="nv-detail-card">
+    <div class="nv-detail-head">
+      <div><div class="nv-detail-title" id="nvDetailTitle">Details</div><div class="nv-detail-sub" id="nvDetailSub"></div></div>
+      <button class="nv-detail-close" onclick="nvCloseDetail()" title="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="nv-detail-body" id="nvDetailBody"></div>
+  </div>
+</div>
+
+</div>
+<!-- end of #root -->
+
+<script src="core/core.js?v=20260929-30"></script>
+<script src="reports/reports.js?v=20260929-30"></script>
+<script src="admin/admin.js?v=20260929-30"></script>
+<script src="live-view/live-view.js?v=20260929-30"></script>
+<!-- the selected space's spaces/<name>/space.js is loaded by core.js -->
+<script>
+// ── On page load ──
+(function bootstrap(){
+  var stored = localStorage.getItem('dashUser');
+  if(stored){
+    try {
+      var user = JSON.parse(stored);
+      // Session valid for 7 days. Access key paused → email-only, no token required.
+      if(user && user.email && (Date.now() - user.ts < 7*24*60*60*1000)){
+        window._userEmail = user.email;
+        window._userName = user.name;
+        window._userRole = user.role;
+        window._accessToken = user.token;
+        showDashboard(user.name);
+        return;
+      }
+    } catch(e){}
+  }
+  showLoginScreen();
+})();
+</script>
+</body>
+</html>

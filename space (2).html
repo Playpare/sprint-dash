@@ -1,0 +1,51 @@
+<!-- My discovery project (MDP) — discovery space: Overview, Prioritization, People. Loaded by core/core.js. -->
+<div class="page active" id="page-overview" data-section-label="Overview">
+<div class="nv-ov-top">
+  <div class="nv-card nv-ov-card"><div class="nv-hd"><span class="nv-card-t" id="dStT">Status</span><span class="nv-pill" id="dStPill"></span></div>
+    <div class="nv-donut st"><canvas id="dStD"></canvas><div class="nv-donut-c" id="dStC"></div></div><div class="nv-chips st" id="dStChips"></div></div>
+  <div class="nv-card nv-ov-card"><div class="nv-hd"><span class="nv-card-t">Ideas</span><span class="nv-pill" id="dGridPill"></span></div><div class="nv-status" id="dGrid"></div></div>
+  <div class="nv-card nv-ov-card"><div class="nv-hd"><span class="nv-card-t">Delivery</span></div>
+    <div class="nv-donut sm"><canvas id="dDelD"></canvas><div class="nv-donut-c" id="dDelC"></div></div><div class="nv-chips" id="dDelChips"></div></div>
+  <div class="nv-card nv-ov-card mh-clickable" id="dRmCard"><div class="nv-hd"><span class="nv-card-t" id="dRmT">Roadmap</span></div><div class="nv-mh-list" id="dRmList"></div><div class="nv-mh-foot" id="dRmFoot"></div></div>
+</div>
+<div class="nv-ov-mid">
+  <div class="nv-card nv-sc-card"><div class="nv-card-t" id="dThT">Ideas by theme</div>
+    <div class="disc-theme-chart" style="position:relative;height:190px"><canvas id="dThC"></canvas></div></div>
+  <div class="nv-card nv-sc-card"><div class="nv-card-t">Jira status</div>
+    <div class="nv-sc-rows" id="dWf"></div></div>
+</div>
+<div class="nv-ov-info">
+  <div class="cc"><div class="cc-t" id="dBoardT">Board</div><div class="nv-lanes" id="dBoard"></div></div>
+  <div class="nv-card nv-pg-card"><div class="nv-pg-top"><span class="nv-pg-title">Delivery progress</span><span class="nv-pg-badges"><span class="nv-pill" id="dDpBadge"></span></span></div>
+    <div id="dDpList"></div></div>
+</div>
+</div>
+
+<div class="page" id="page-team" data-section-label="Prioritization">
+<div class="nv-card nv-team-card">
+  <div class="nv-team-hd"><span class="nv-card-t" id="dTopT">Top ideas</span><span class="nv-pill" id="dTopPill"></span></div>
+  <div class="nv-filter-row" id="dTopFilter"></div>
+  <div class="nv-team-leg" id="dTopLeg"></div><div class="nv-indv-chart" id="dTopWrap"><canvas id="dTopC"></canvas></div>
+</div>
+<div class="nv-team-bottom">
+  <div class="nv-card nv-sc-card" id="dMxCard"><div class="nv-card-t">Impact vs effort</div>
+    <div class="nv-team-sub" style="margin:2px 0 10px" id="dMxS"></div><div style="position:relative;height:340px"><canvas id="dMxC"></canvas></div></div>
+  <div class="nv-stat-tiles" id="dPrTiles"></div>
+</div>
+<div class="nv-unplanned-bar" id="dNoScore"></div>
+</div>
+
+<div class="page" id="page-retro" data-section-label="People">
+<div class="nv-card nv-team-card">
+  <div class="nv-team-hd"><span class="nv-card-t">Ideas per person</span><span class="nv-pill" id="dPpPill"></span></div>
+  <div class="nv-team-sub">Ideas by person, split by Jira status category · click a bar for the list</div>
+  <div class="nv-filter-row" id="dPpFilter"></div>
+  <div class="nv-team-leg"><span class="i"><span class="sq" style="background:#f5a623"></span>To Do</span><span class="i"><span class="sq" style="background:#4d9fff"></span>In Progress</span><span class="i"><span class="sq" style="background:#18c97a"></span>Done</span></div>
+  <div class="nv-indv-chart" id="dPpWrap"><canvas id="dPpC"></canvas></div>
+</div>
+<div class="nv-team-bottom">
+  <div class="nv-card nv-sc-card"><div class="nv-card-t" id="dPsT">Themes per person</div>
+    <div class="nv-team-sub" style="margin:2px 0 10px" id="dPsS"></div><div class="nv-sc-rows" id="dPsRows"></div></div>
+  <div class="nv-stat-tiles" id="dPpTiles"></div>
+</div>
+</div>

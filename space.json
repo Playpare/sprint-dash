@@ -1,0 +1,8 @@
+{
+  "key": "MSSDISC",
+  "name": "MSS - Discovery",
+  "type": "discovery",
+  "html": "space.html",
+  "css": "space.css",
+  "js": "space.js"
+}

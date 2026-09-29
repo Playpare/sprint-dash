@@ -1,0 +1,27 @@
+<!-- Live View page (sprint spaces). Loaded by core/core.js; filled by live-view/live-view.js. -->
+<div class="page" id="page-live" data-section-label="MMS Live View">
+<div class="lv-wrap">
+  <div class="lv-card lv-main">
+    <div class="lv-head">
+      <div class="lv-title" id="lvTitle">—</div>
+      <div class="lv-dates">
+        <div class="lv-date"><div class="v" id="lvStart">—</div><div class="l">Start</div></div>
+        <svg class="lv-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        <div class="lv-date"><div class="v" id="lvEnd">—</div><div class="l">End</div></div>
+      </div>
+      <div class="lv-count"><div class="v" id="lvCount">—</div><div class="l" id="lvCountL">Time Remaining</div></div>
+    </div>
+    <div class="lv-stats">
+      <div class="lv-stat"><div class="l">Total Work</div><div class="v" id="lvTotal">—</div></div>
+      <div class="lv-stat"><div class="l">Work Left</div><div class="v" id="lvLeft">—</div></div>
+      <div class="lv-stat"><div class="l">Time Left</div><div class="v" id="lvTime">—</div></div>
+      <div class="lv-stat"><div class="l" id="lvBehindL">Hours Behind</div><div class="v" id="lvBehind">—</div></div>
+    </div>
+    <div class="lv-chart" id="lvChartWrap"><canvas id="lvC"></canvas></div>
+  </div>
+  <div class="lv-card lv-side">
+    <div class="lv-donut"><canvas id="lvD"></canvas><div class="lv-donut-c"><div class="v" id="lvDTotal">0</div><div class="l">Total</div></div></div>
+    <div class="lv-legend" id="lvLegend"></div>
+  </div>
+</div>
+</div>

@@ -1,0 +1,27 @@
+<!-- Reports pages (Spillovers, Performance, Leave, Ideas list). Loaded by core/core.js. -->
+<!-- SPILLOVERS — only carry-over (backlog moved out, subtasks moved to Team) -->
+<div class="page" id="page-spillovers" data-section-label="Spillovers">
+<div class="cc"><div id="carryS"></div></div>
+</div>
+
+<!-- PERFORMANCE -->
+<div class="page" id="page-performance" data-section-label="Performance">
+<div class="g2">
+<div class="cc"><div class="cc-t">Top impact performers</div><div class="cc-s">Exceptional ratings (5/5)</div><div id="starsS"></div></div>
+<div class="cc"><div class="cc-t">Top 5 time drainers</div><div class="cc-s">Tasks over estimated budget</div><div id="drainS"></div></div>
+</div>
+<div class="cc"><div class="cc-t">Performance scorecard</div>
+<div class="cc-s">Composite score · Completion 30% · Estimation 25% · Productivity 15% · Impact 20% · Early bonus 10% · Drainers −15%</div>
+<div id="perfS"></div></div>
+<div class="cc"><div id="eS"></div></div>
+</div>
+
+<!-- LEAVE -->
+<div class="page" id="page-leave" data-section-label="Leave">
+<div id="leavePage"></div>
+</div>
+
+<div class="page" id="page-ideas" data-section-label="Ideas list">
+<div class="cc"><div class="nv-team-hd"><span class="cc-t">All ideas</span><input id="dQ" class="nv-dq" placeholder="Find an idea…" oninput="_discQuery=this.value;doDiscIdeas(window._discData)"></div>
+<div class="cc-s" id="dListS"></div><div class="nv-dtbl-wrap" id="dList"></div></div>
+</div>

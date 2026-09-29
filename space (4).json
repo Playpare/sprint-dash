@@ -1,0 +1,8 @@
+{
+  "key": "MDP",
+  "name": "My discovery project",
+  "type": "discovery",
+  "html": "space.html",
+  "css": "space.css",
+  "js": "space.js"
+}

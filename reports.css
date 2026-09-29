@@ -1,0 +1,44 @@
+/* Reports — Spillovers, Performance, Leave, Ideas list */
+.ec{background:var(--sur);border:0.5px solid rgba(24,201,122,.2);border-radius:10px;padding:14px;position:relative}
+.ec::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grn);border-radius:10px 10px 0 0}
+.ec-badge{position:absolute;top:10px;right:10px;font-size:9px;padding:2px 7px;border-radius:8px;background:rgba(24,201,122,.1);color:var(--grn);border:0.5px solid rgba(24,201,122,.25)}
+.ec-name{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;padding-right:60px}
+.ec-task{font-size:10px;color:var(--mut);margin-bottom:10px;line-height:1.5}
+.ec-stats{display:flex;gap:14px}
+/* performance */
+.perf-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.perf-stat{background:var(--sur2);border:0.5px solid var(--bor);border-radius:8px;padding:12px;text-align:center}
+.perf-stat-v{font-size:18px;font-weight:600;color:var(--text);line-height:1}
+.perf-stat-l{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-top:5px}
+.perf-tbl tr:hover td{background:var(--sur2)}
+.perf-rank{width:24px;height:24px;border-radius:50%;background:var(--sur2);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--mut)}
+.perf-rank.r1{background:rgba(245,166,35,.15);color:var(--amb)}
+.perf-rank.r2{background:rgba(155,114,245,.15);color:var(--pur)}
+.perf-rank.r3{background:rgba(34,196,196,.15);color:var(--teal)}
+.perf-name{font-weight:500;color:var(--text)}
+.perf-team{display:inline-block;font-size:9px;padding:2px 7px;border-radius:6px;color:#fff;font-weight:600;margin-left:6px}
+.perf-bar{width:90px;height:6px;background:var(--sur2);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:8px}
+.perf-bar-fill{height:100%;border-radius:3px}
+.perf-grade{display:inline-flex;align-items:center;justify-content:center;width:32px;height:22px;border-radius:6px;font-size:11px;font-weight:700}
+.grade-Aplus{background:rgba(24,201,122,.15);color:var(--grn)}
+.grade-A{background:rgba(24,201,122,.12);color:var(--grn)}
+.grade-B{background:rgba(91,110,245,.12);color:var(--acc)}
+.grade-C{background:rgba(245,166,35,.12);color:var(--amb)}
+.grade-D{background:rgba(240,82,82,.12);color:var(--red)}
+.perf-score-cell{font-weight:600;font-size:13px}
+.perf-mini{font-size:9px;color:var(--mut);margin-top:2px}
+.leave-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-bottom:12px}
+.leave-preview{background:var(--sur2);border:1px solid var(--bor);border-radius:8px;padding:12px;min-height:76px;font-size:12px;color:var(--mut);line-height:1.6}
+.leave-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.leave-stat{background:var(--sur);border:1px solid var(--bor);border-radius:10px;padding:13px 14px}
+.leave-stat-l{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin-top:6px;font-weight:700}
+.leave-status{font-size:11px;color:var(--mut);margin-top:8px;min-height:16px}
+@media (max-width:860px){
+  .leave-grid,.leave-stats{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  .perf-summary{grid-template-columns:repeat(2,1fr)}
+}
+.nv-dq{background:var(--sur2);border:1px solid var(--bor);border-radius:8px;color:var(--text);font-size:12px;padding:7px 11px;width:240px;font-family:inherit;outline:none}
+.nv-dtbl-wrap{overflow-x:auto;margin-top:10px}
+.perf-mini{font-size:10.5px}

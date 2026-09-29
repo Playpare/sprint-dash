@@ -1,0 +1,8 @@
+{
+  "key": "MMS",
+  "name": "My Mall Simulator",
+  "type": "sprint",
+  "html": "space.html",
+  "css": "space.css",
+  "js": "space.js"
+}

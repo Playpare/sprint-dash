@@ -1,0 +1,89 @@
+<!-- My Supermarket Simulator- Delivery (MSSD) — sprint space: Overview, Team, Bugs & Polish, Retrospective. Loaded by core/core.js. -->
+<!-- OVERVIEW -->
+<div class="page active" id="page-overview" data-section-label="Overview">
+<!-- ── Top row: completion donut · status grid · bugs donut · scope donut · missing hours ── -->
+<div class="nv-ov-top">
+  <div class="nv-card nv-ov-card">
+    <div class="nv-hd">
+      <span class="nv-card-t">Status overview</span>
+      <span class="nv-pill" id="ovCompPill"></span></div>
+    <div class="nv-donut st"><canvas id="crD"></canvas><div class="nv-donut-c" id="crDc"></div></div>
+    <div class="nv-chips st" id="ovCompChips"></div>
+  </div>
+  <div class="nv-card nv-ov-card">
+    <div class="nv-hd"><span class="nv-card-t">Status</span><span class="nv-pill" id="ovStatusPill"></span></div>
+    <div class="nv-status" id="ovStatus"></div>
+  </div>
+  <div class="nv-card nv-ov-card">
+    <div class="nv-hd"><span class="nv-card-t">Scope Creep</span></div>
+    <div class="nv-donut sm"><canvas id="scD"></canvas><div class="nv-donut-c" id="scDc"></div></div>
+    <div class="nv-chips" id="ovScopeChips"></div>
+  </div>
+  <div class="nv-card nv-ov-card nv-alert-card mh-clickable" onclick="nvSidebarAlertsDetail()">
+    <div class="nv-hd"><span class="nv-card-t">Alerts</span><span class="nv-pill" id="ovAlertPill"></span></div>
+    <div class="nv-mh-list" id="ovAlertList"></div>
+    <div class="nv-mh-foot" id="ovAlertFoot"></div>
+  </div>
+</div>
+<!-- ── Info row: burndown + sprint progress ── -->
+<div class="nv-ov-info">
+  <div class="cc">
+    <div class="cc-t">Sprint Burndown Chart</div>
+    <div class="leg" id="burnLeg"><span class="li"><span class="lsq" style="background:#5b6ef5"></span>Guideline</span>
+    <span class="li"><span class="lsq" style="background:#18c97a"></span>Time Spent</span>
+    <span class="li"><span class="lsq" style="background:#f05252"></span>Remaining Values</span>
+    <span class="li"><span class="lsq" style="background:rgba(150,160,220,.25)"></span>Non-Working Days</span></div>
+    <div id="burnWrap" style="position:relative;height:300px"><canvas id="bC"></canvas></div>
+  </div>
+  <div class="nv-card nv-pg-card">
+    <div class="nv-pg-top"><span class="nv-pg-title">Sprint progress</span>
+      <span class="nv-pg-badges"><span class="nv-pill" id="spBadge"></span><span class="nv-pill" id="spBadge2"></span></span></div>
+    <div class="nv-pg-line"><span class="nv-pg-dates" id="spDates"></span><span class="nv-pg-pct" id="spPct"></span></div>
+    <div class="nv-pg-track"><i id="spFill"></i></div>
+    <div class="nv-pg-days" id="spDays"></div>
+    <div class="nv-pg-depts" id="spDepts"></div>
+  </div>
+</div>
+<!-- ── Sprint goal bar (full goal editor) ── -->
+<div class="nv-goal"><div id="sprintGoalBox"></div></div>
+</div>
+
+<!-- TEAM -->
+<div class="page" id="page-team" data-section-label="Team">
+<div class="nv-card nv-team-card">
+  <div class="nv-team-hd"><span class="nv-card-t">Individual Progress</span><span class="nv-pill" id="tmPill"></span></div>
+  <div class="nv-filter-row" id="tmFilter"></div>
+  <div class="nv-team-leg"><span class="i"><span class="sq" style="background:#9b72f5"></span>Est. time</span>
+  <span class="i"><span class="sq" style="background:#18c97a"></span>Logged (under)</span>
+  <span class="i"><span class="sq" style="background:#f05252"></span>Logged (overtime)</span></div>
+  <div class="nv-indv-chart"><canvas id="indvC"></canvas></div>
+</div>
+<div class="nv-card nv-team-card" style="margin-top:12px">
+  <div class="nv-team-hd"><span class="nv-card-t">Individual Burndown Chart</span>
+    <div class="nv-burn-dd" id="pbDD"><button type="button" class="nv-burn-dd-btn" onclick="togglePersonBurnMenu(event)"><span id="pbDDLabel">&mdash; Select an individual &mdash;</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button><div class="nv-burn-dd-menu" id="pbDDMenu"></div></div>
+    <select id="pbSel" style="display:none" aria-hidden="true"></select></div>
+  <div class="nv-team-leg"><span class="i"><span class="sq" style="background:#5b6ef5"></span>Guideline</span><span class="i"><span class="sq" style="background:#18c97a"></span>Time Spent</span>
+  <span class="i"><span class="sq" style="background:#f05252"></span>Remaining Values</span><span class="i"><span class="sq" style="background:rgba(150,160,220,.25)"></span>Non-Working Days</span></div>
+  <div style="position:relative;height:300px" id="pbWrap"><canvas id="pbC"></canvas></div>
+  <div id="pbInfo" style="font-size:11px;color:var(--mut);margin-top:10px"></div>
+</div>
+<div class="nv-team-bottom">
+  <div class="nv-card nv-sc-card"><div class="nv-card-t">Scope creep by team</div>
+    <div class="nv-sc-rows" id="tmScRows"></div>
+    <div class="nv-sc-leg"><span><i class="planned"></i>Planned</span><span><i class="unplanned"></i>Unplanned</span></div></div>
+  <div class="nv-stat-tiles" id="tmStats"></div>
+</div>
+<div class="nv-unplanned-bar" id="tmUnplanned"></div>
+</div>
+
+<!-- BUGS -->
+<div class="page" id="page-bugs" data-section-label="Bugs &amp; Polish">
+<div id="bugsS"></div>
+<div style="height:22px"></div>
+<div id="polishS"></div>
+</div>
+
+<!-- RETRO -->
+<div class="page" id="page-retro" data-section-label="Retrospective">
+<div id="retroS"></div>
+</div>

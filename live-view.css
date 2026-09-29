@@ -1,0 +1,108 @@
+/* Live View — sprint header, 4 stat boxes, burndown and status donut.
+   Font: LINE Seed Sans (below); sizes / number styling follow the dashboard. */
+/* Numbers on Live View use ExtraBold (800); text uses Bold (700).
+   Live View font: LINE Seed Sans (live-view/fonts, from LINE_Seed_Sans_V1.003/Web).
+   Weights: 100 Thin · 400 Regular · 700 Bold · 800 ExtraBold · 900 Heavy. */
+@font-face{font-family:'LINE Seed Sans';src:url('fonts/LINESeedSans_W_Th.woff2') format('woff2'),url('fonts/LINESeedSans_W_Th.woff') format('woff');font-weight:100;font-style:normal;font-display:swap}
+@font-face{font-family:'LINE Seed Sans';src:url('fonts/LINESeedSans_W_Rg.woff2') format('woff2'),url('fonts/LINESeedSans_W_Rg.woff') format('woff');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'LINE Seed Sans';src:url('fonts/LINESeedSans_W_Bd.woff2') format('woff2'),url('fonts/LINESeedSans_W_Bd.woff') format('woff');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'LINE Seed Sans';src:url('fonts/LINESeedSans_W_XBd.woff2') format('woff2'),url('fonts/LINESeedSans_W_XBd.woff') format('woff');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'LINE Seed Sans';src:url('fonts/LINESeedSans_W_He.woff2') format('woff2'),url('fonts/LINESeedSans_W_He.woff') format('woff');font-weight:900;font-style:normal;font-display:swap}
+#page-live{--lv-font:'LINE Seed Sans',sans-serif}
+/* core.css sets `#root *{font-family:var(--font-body)!important}` — pointing the
+   dashboard font variables at LINE Seed Sans inside Live View switches it here only. */
+#page-live{--font-body:var(--lv-font);--font-mono:var(--lv-font);--font-display:var(--lv-font)}
+#lvBTooltip,#lvBTooltip *{font-family:var(--lv-font)!important}
+#lvBTooltip{--lv-font:'LINE Seed Sans',sans-serif;font-size:14px;padding:10px 13px}
+#lvBTooltip .lv-bt-t{font-weight:700;margin-bottom:6px;color:#fff}
+#lvBTooltip .lv-bt-r{display:flex;align-items:center;gap:0;line-height:1.7}
+#lvBTooltip .lv-bt-r .value{margin-left:auto;padding-left:16px;font-weight:800}
+.sb-item[data-page="live"]{display:flex}
+.disc-mode .sb-item[data-page="live"]{display:none}
+
+/* Live View: no top bar and no Overview/Team/Retro tabs. It shows the sprint
+   picked in the space's dropdown. On small screens only the ☰ button stays
+   (it is the only way to open the sidebar there). */
+#root.live-mode .main-topbar .page-title-wrap,
+#root.live-mode .main-topbar .main-actions,
+#root.live-mode #nvTabs{display:none!important}
+@media(min-width:861px){ #root.live-mode .main-topbar{display:none} }
+
+/* Desktop Live View occupies the available viewport exactly. Keeping every
+   flex/grid parent at min-height:0 prevents the small overflow scrollbar. */
+#root.live-mode .page-content{overflow-x:hidden}
+@media(min-width:1201px){
+  #root.live-mode .main-area{height:100vh;min-height:0;overflow:hidden}
+  #root.live-mode .page-content{height:100vh;min-height:0;flex:none;overflow:hidden}
+  #root.live-mode #page-live{height:100%;min-height:0}
+  #root.live-mode #page-live .lv-wrap{height:100%;min-height:0}
+  #root.live-mode #page-live .lv-card{min-height:0;overflow:hidden}
+}
+
+/* Fill the whole screen height (page padding is 22px top + bottom). */
+#page-live .lv-wrap{display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);gap:14px;align-items:stretch;min-height:calc(100vh - 44px)}
+#page-live .lv-main{display:flex;flex-direction:column}
+#page-live .lv-card{background:var(--sur);border:1px solid var(--bor);border-radius:12px;padding:18px 20px;min-width:0}
+#page-live .lv-card,#page-live .lv-card *{font-family:var(--lv-font);font-style:normal;letter-spacing:0}
+
+/* Header: sprint name · start → end · countdown */
+/* Title left · dates centred in the card · countdown right */
+#page-live .lv-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:20px;margin-bottom:16px}
+#page-live .lv-title{font-size:clamp(46px,3.2vw,64px);font-weight:800;line-height:1.02;color:var(--text);text-transform:uppercase;min-width:0;justify-self:start;white-space:nowrap}
+#page-live .lv-dates{display:flex;align-items:center;gap:12px;justify-self:center}
+#page-live .lv-date{text-align:center}
+#page-live .lv-date .v{font-family:var(--lv-font);font-size:30px;font-weight:800;line-height:1.1;color:var(--mut);text-transform:uppercase}
+#page-live .lv-date .l{font-size:18px;font-weight:600;color:var(--mut);margin-top:4px}
+#page-live .lv-arrow{width:24px;height:24px;fill:none;stroke:var(--mut);stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round}
+#page-live .lv-count{text-align:right;justify-self:end}
+#page-live .lv-count .v{font-family:var(--lv-font);font-size:40px;font-weight:800;line-height:1.05;color:var(--amb);white-space:nowrap}
+#page-live .lv-count .v .dg{display:inline-block;width:.70em;text-align:center}
+#page-live .lv-count .l{font-size:16px;font-weight:600;color:var(--amb);margin-top:2px}
+#page-live .lv-count.ended .v,#page-live .lv-count.ended .l{color:var(--mut)}
+
+/* Stat boxes */
+#page-live .lv-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+#page-live .lv-stat{background:var(--sur2);border:1px solid var(--bor);border-radius:10px;padding:14px 18px}
+#page-live .lv-stat .l{font-size:15px;font-weight:600;color:var(--mut);text-transform:uppercase;line-height:1.3}
+#page-live .lv-stat .v{font-family:var(--lv-font);font-size:34px;font-weight:800;line-height:1.15;color:var(--text);margin-top:6px;white-space:nowrap}
+#page-live .lv-stat .v.bad{color:var(--red)}
+#page-live .lv-stat .v.good{color:var(--grn)}
+
+/* Burndown */
+#page-live .lv-chart{position:relative;flex:1 1 auto;min-height:380px;height:0;background:#000;border:1px solid var(--bor);border-radius:10px;padding:8px 10px 4px}
+#root.light #page-live .lv-chart{background:var(--sur2)}
+#page-live .lv-chart .nv-dt-empty{height:100%;display:flex;align-items:center;justify-content:center}
+
+/* Status donut + legend */
+/* Donut fills the top of the card; legend fills the rest with equal gaps, inset from the edges. */
+#page-live .lv-side{display:flex;flex-direction:column;justify-content:flex-start;gap:10px;padding-top:14px;padding-bottom:14px}
+#page-live .lv-donut{position:relative;width:100%;max-width:min(100%,50vh);aspect-ratio:1;margin:0 auto;flex:0 1 auto}
+#page-live .lv-donut-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+#page-live .lv-donut-c .v{font-family:var(--lv-font);font-size:clamp(78px,5vw,104px);font-weight:800;line-height:.95;color:var(--text)}
+#page-live .lv-donut-c .l{font-size:24px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-top:10px}
+#page-live .lv-legend{display:flex;flex-direction:column;justify-content:space-evenly;flex:1 1 auto;min-height:0;gap:5px;padding:5px 22px 0}
+#page-live .lv-leg{display:grid;grid-template-columns:36px minmax(0,1fr) 92px 92px;align-items:center;gap:16px;padding:7px 8px;border-radius:8px;cursor:pointer;transition:background .15s}
+#page-live .lv-leg:hover{background:rgba(255,255,255,.04)}
+#page-live .lv-leg .sq{width:34px;height:34px;border-radius:8px}
+#page-live .lv-leg .n{font-size:clamp(27px,1.7vw,34px);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#page-live .lv-leg .c{font-family:var(--lv-font);font-size:34px;font-weight:800;color:var(--text);text-align:right}
+#page-live .lv-leg .p{font-family:var(--lv-font);font-size:33px;font-weight:800;text-align:right}
+
+@media(max-width:1200px){
+  #page-live .lv-wrap{grid-template-columns:1fr;min-height:0}
+  #page-live .lv-chart{flex:none;height:470px}
+  #page-live .lv-donut{max-width:320px}
+  #page-live .lv-donut-c .v{font-size:68px}
+  #page-live .lv-donut-c .l{font-size:19px}
+}
+@media(max-width:720px){
+  #page-live .lv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #page-live .lv-title,#page-live .lv-count .v{font-size:26px}
+  #page-live .lv-head{grid-template-columns:1fr;justify-items:center;text-align:center}
+  #page-live .lv-title,#page-live .lv-count{justify-self:center;text-align:center}
+  #page-live .lv-chart{flex:none;height:340px}
+  #page-live .lv-leg{grid-template-columns:26px minmax(0,1fr) 62px 62px;gap:10px}
+  #page-live .lv-leg .sq{width:24px;height:24px}
+  #page-live .lv-leg .n{font-size:20px}
+  #page-live .lv-leg .c,#page-live .lv-leg .p{font-size:22px}
+}
