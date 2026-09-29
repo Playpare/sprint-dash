@@ -23,7 +23,7 @@ index.html                         Application shell and navigation
 code.gs                            Google Apps Script backend source
 core/
   core.css                         Shared layout, theme, cards, dialogs and typography
-  core.js                          API URL, loader, routing, space switching and shared logic
+  core.js                          loader, routing, space switching and shared logic
 spaces/
   My Mall Simulator/               MMS sprint-space pages
     space.json
@@ -77,7 +77,7 @@ block the modular `fetch()` requests.
 
 ### `core/core.js`
 
-- Stores the deployed Apps Script web-app URL in `API`.
+- Uses the Apps Script web-app URL `API`, which is set in `index.html`.
 - Maps space keys to their folders through `SPACE_FOLDERS`.
 - Loads each selected space's `space.json`, HTML, CSS and JavaScript.
 - Loads the shared Reports, Admin and Live View modules.
@@ -195,8 +195,8 @@ Required Script Properties:
 | `SPACE_<KEY>_NAME` | Fallback display name |
 | `SPACE_<KEY>_VIEW_ID` | Optional reference value |
 
-Deploy Apps Script as a web app, then place its `/exec` URL in the `API` variable at
-the top of `core/core.js`. Create a new Apps Script deployment version after backend
+Deploy Apps Script as a web app, then place its `/exec` URL in the `API` variable near
+the top of `index.html` (next to `DASH_VERSION`). Create a new Apps Script deployment version after backend
 changes.
 
 ## 8. GitHub Pages
