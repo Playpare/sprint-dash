@@ -3,7 +3,7 @@
    page switching, shared pop-ups (detail modal, member modal), theme, sidebar,
    sync bar, loader, login and PDF export. Page state (filters, open tabs,
    timers) also lives here so reloading a space's script never resets it. */
-var API='https://script.google.com/macros/s/AKfycby_TtWaBhGyFgHFqCvVJrfeh_c3WLtPHAMfCGrecjgmeWwLi1LH6LyaY1dsfsKIps2o/exec';   // Apps Script → Deploy → Web app URL (…/exec)
+// API = Apps Script web-app URL — set in index.html (next to DASH_VERSION).
 
 // ── Jira spaces ──
 // Every request carries &space=KEY (see tok()). The sidebar "Spaces" group
