@@ -42,6 +42,7 @@ function selectSpace(key){
   try { localStorage.setItem('dashSpace', key); } catch(e){}
   currentPage='overview';
   markActiveSpace();
+  syncSbTabMode();
   document.querySelectorAll('.sb-item[data-page]').forEach(function(el){ el.classList.remove('on'); });
   document.querySelectorAll('.nv-tab').forEach(function(el){ el.classList.toggle('on',el.dataset.page==='overview'); });
   if(window.innerWidth <= 860) document.getElementById('sidebar').classList.remove('open');
@@ -420,6 +421,7 @@ function switchPage(page){
   currentPage = page;
   // Live View hides the top bar (except Sync Now) and the tab row.
   document.getElementById('root').classList.toggle('live-mode', page === 'live');
+  syncSbTabMode();
   lvToggleSidebar(false);
   // Reset breakdown box if leaving team page
   var bd = document.getElementById('bdBox');
@@ -634,6 +636,7 @@ function render(d){
   document.getElementById('mc').innerHTML = shell();
   window._sprintData = d;
   document.getElementById('root').classList.toggle('live-mode', currentPage === 'live');
+  syncSbTabMode();
   // Reset rendered-pages tracking — fresh data means everything needs re-render
   _renderedPages = {};
   // Show Users page only for Admin
@@ -1288,8 +1291,15 @@ function toggleSidebar(){
   // collapse transition (CSS transition is .2s; give it a beat to settle).
   setTimeout(positionSidebarIndicator, 220);
 }
-// Live View: the sidebar is hidden and the top-left logo opens/closes it as an
-// overlay. Picking anything in the sidebar closes it again.
+// Hidden sidebar + arrow tab (live-view.css .sb-tab-mode): on Live View and on
+// every page of the MMS space.
+var SB_TAB_SPACES=['MMS'];
+function syncSbTabMode(){
+  var root=document.getElementById('root'); if(!root) return;
+  root.classList.toggle('sb-tab-mode', currentPage==='live' || SB_TAB_SPACES.indexOf(window._space)!==-1);
+}
+// The arrow tab opens/closes the sidebar as an overlay. Picking anything in
+// the sidebar closes it again.
 function lvToggleSidebar(open){
   var root=document.getElementById('root'); if(!root) return;
   if(open===undefined) open=!root.classList.contains('lv-sb-open');
@@ -1325,6 +1335,7 @@ function setupSidebar(){
     el.addEventListener('click', function(){ selectSpace(this.getAttribute('data-space')); });
   });
   markActiveSpace();
+  syncSbTabMode();
   // Top tab-row (demo design)
   document.querySelectorAll('.nv-tab').forEach(function(el){
     el.addEventListener('click', function(){ switchPage(this.dataset.page); });

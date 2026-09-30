@@ -25,21 +25,24 @@
    the sidebar is the small arrow tab on the left edge (#lvLogo) — it sits in
    the page's own left padding, so the cards keep their full width. It opens
    the sidebar as an overlay (tab moves to the sidebar's edge, arrow flips);
-   the backdrop, the tab again or picking an item closes it. */
+   the backdrop, the tab again or picking an item closes it.
+   The hidden sidebar + arrow tab (.sb-tab-mode) is also used on the MMS space
+   pages (set in core.js); only Live View hides the top bar and tabs. */
 #root.live-mode .main-topbar,
 #root.live-mode #nvTabs{display:none!important}
-#root.live-mode .sidebar{display:none}
+#root.sb-tab-mode .sidebar{display:none}
+#root.sb-tab-mode .main-topbar .hamburger{display:none!important}
 .lv-sb-tab,.lv-sb-backdrop{display:none}
-#root.live-mode .lv-sb-tab{display:flex;align-items:center;justify-content:center;position:fixed;top:18px;left:0;z-index:130;
+#root.sb-tab-mode .lv-sb-tab{display:flex;align-items:center;justify-content:center;position:fixed;top:18px;left:0;z-index:130;
   width:14px;height:34px;padding:0;border:1px solid var(--bor);border-left:0;border-radius:0 7px 7px 0;
   background:var(--sur2);color:var(--mut);cursor:pointer;opacity:.7;transition:opacity .15s,color .15s,left .2s}
-#root.live-mode .lv-sb-tab:hover{opacity:1;color:var(--text)}
-#root.live-mode .lv-sb-tab svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
-#root.live-mode.lv-sb-open .lv-sb-tab{left:187px;opacity:1}
-#root.live-mode.lv-sb-open .sidebar.collapsed ~ .lv-sb-tab{left:56px}
-#root.live-mode.lv-sb-open .lv-sb-tab svg{transform:rotate(180deg)}
-#root.live-mode.lv-sb-open .sidebar{display:flex;position:fixed;left:0;top:0;bottom:0;height:100vh;z-index:120;transform:none;box-shadow:0 4px 30px rgba(0,0,0,.5)}
-#root.live-mode.lv-sb-open .lv-sb-backdrop{display:block;position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.45)}
+#root.sb-tab-mode .lv-sb-tab:hover{opacity:1;color:var(--text)}
+#root.sb-tab-mode .lv-sb-tab svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+#root.sb-tab-mode.lv-sb-open .lv-sb-tab{left:187px;opacity:1}
+#root.sb-tab-mode.lv-sb-open .sidebar.collapsed ~ .lv-sb-tab{left:56px}
+#root.sb-tab-mode.lv-sb-open .lv-sb-tab svg{transform:rotate(180deg)}
+#root.sb-tab-mode.lv-sb-open .sidebar{display:flex;position:fixed;left:0;top:0;bottom:0;height:auto;z-index:120;transform:none;box-shadow:0 4px 30px rgba(0,0,0,.5)}
+#root.sb-tab-mode.lv-sb-open .lv-sb-backdrop{display:block;position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.45)}
 
 /* Desktop Live View occupies the available viewport exactly. Keeping every
    flex/grid parent at min-height:0 prevents the small overflow scrollbar. */

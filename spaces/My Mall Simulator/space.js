@@ -1,4 +1,10 @@
 /* My Mall Simulator (MMS) — sprint space: Overview, Team, Bugs & Polish, Retrospective */
+// TV zoom factor for space.css (screen width ÷ 1920 desktop width).
+(function(){
+  function setTvZoom(){ document.documentElement.style.setProperty('--tvz', String(window.innerWidth/1920)); }
+  setTvZoom();
+  if(!window._tvZoomBound){ window._tvZoomBound=true; window.addEventListener('resize', setTvZoom); }
+})();
 function process(json,spId){
   var tasks   = (json.tasks||[]).filter(function(t){return !spId||t.sprintId===spId;});
   var subtasks= (json.subtasks||[]).filter(function(t){return !spId||t.sprintId===spId;});
