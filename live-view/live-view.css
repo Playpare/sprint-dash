@@ -20,13 +20,26 @@
 .sb-item[data-page="live"]{display:flex}
 .disc-mode .sb-item[data-page="live"]{display:none}
 
-/* Live View: no top bar and no Overview/Team/Retro tabs. It shows the sprint
-   picked in the space's dropdown. On small screens only the ☰ button stays
-   (it is the only way to open the sidebar there). */
-#root.live-mode .main-topbar .page-title-wrap,
-#root.live-mode .main-topbar .main-actions,
+/* Live View: full screen — no top bar, no Overview/Team/Retro tabs and no
+   sidebar. It shows the sprint picked in the space's dropdown. The only way to
+   the sidebar is the small arrow tab on the left edge (#lvLogo) — it sits in
+   the page's own left padding, so the cards keep their full width. It opens
+   the sidebar as an overlay (tab moves to the sidebar's edge, arrow flips);
+   the backdrop, the tab again or picking an item closes it. */
+#root.live-mode .main-topbar,
 #root.live-mode #nvTabs{display:none!important}
-@media(min-width:861px){ #root.live-mode .main-topbar{display:none} }
+#root.live-mode .sidebar{display:none}
+.lv-sb-tab,.lv-sb-backdrop{display:none}
+#root.live-mode .lv-sb-tab{display:flex;align-items:center;justify-content:center;position:fixed;top:18px;left:0;z-index:130;
+  width:14px;height:34px;padding:0;border:1px solid var(--bor);border-left:0;border-radius:0 7px 7px 0;
+  background:var(--sur2);color:var(--mut);cursor:pointer;opacity:.7;transition:opacity .15s,color .15s,left .2s}
+#root.live-mode .lv-sb-tab:hover{opacity:1;color:var(--text)}
+#root.live-mode .lv-sb-tab svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+#root.live-mode.lv-sb-open .lv-sb-tab{left:187px;opacity:1}
+#root.live-mode.lv-sb-open .sidebar.collapsed ~ .lv-sb-tab{left:56px}
+#root.live-mode.lv-sb-open .lv-sb-tab svg{transform:rotate(180deg)}
+#root.live-mode.lv-sb-open .sidebar{display:flex;position:fixed;left:0;top:0;bottom:0;height:100vh;z-index:120;transform:none;box-shadow:0 4px 30px rgba(0,0,0,.5)}
+#root.live-mode.lv-sb-open .lv-sb-backdrop{display:block;position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.45)}
 
 /* Desktop Live View occupies the available viewport exactly. Keeping every
    flex/grid parent at min-height:0 prevents the small overflow scrollbar. */
@@ -94,6 +107,43 @@
   #page-live .lv-donut{max-width:320px}
   #page-live .lv-donut-c .v{font-size:68px}
   #page-live .lv-donut-c .l{font-size:19px}
+}
+/* TVs: most TV browsers report a 1080p/4K screen as ~960×540 CSS px, which fell
+   into the stacked layout above. Landscape screens in this range keep the
+   desktop side-by-side layout, with every size in vw (desktop px ÷ 1920) so it
+   looks like the 1920px desktop view scaled down. Keep this query in sync with
+   LV_TV_MQ in live-view.js (chart text scales with it). */
+@media (min-width:861px) and (max-width:1200px) and (orientation:landscape) and (min-height:450px){
+  #root.live-mode .main-area{height:100vh;min-height:0;overflow:hidden}
+  #root.live-mode .page-content{height:100vh;min-height:0;flex:none;overflow:hidden;padding:1.15vw 1.46vw}
+  #root.live-mode .lv-sb-tab{top:.94vw;width:12px;height:28px}   /* fits the 1.46vw left padding */
+  #root.live-mode #page-live{height:100%;min-height:0}
+  #root.live-mode #page-live .lv-wrap{height:100%;min-height:0}
+  #root.live-mode #page-live .lv-card{min-height:0;overflow:hidden}
+
+  #page-live .lv-wrap{grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:.73vw}
+  #page-live .lv-card{padding:.94vw 1.04vw;border-radius:.63vw}
+  #page-live .lv-head{gap:1.04vw;margin-bottom:.83vw}
+  #page-live .lv-title{font-size:3.2vw}
+  #page-live .lv-dates{gap:.63vw}
+  #page-live .lv-date .v{font-size:1.56vw}
+  #page-live .lv-date .l{font-size:.94vw;margin-top:.21vw}
+  #page-live .lv-arrow{width:1.25vw;height:1.25vw}
+  #page-live .lv-count .v{font-size:2.08vw}
+  #page-live .lv-count .l{font-size:.83vw}
+  #page-live .lv-stats{gap:.63vw;margin-bottom:.73vw}
+  #page-live .lv-stat{padding:.73vw .94vw;border-radius:.52vw}
+  #page-live .lv-stat .l{font-size:.78vw}
+  #page-live .lv-stat .v{font-size:1.77vw;margin-top:.31vw}
+  #page-live .lv-chart{flex:1 1 auto;height:0;min-height:0;border-radius:.52vw;padding:.42vw .52vw .21vw}
+  #page-live .lv-side{gap:.52vw;padding-top:.73vw;padding-bottom:.73vw}
+  #page-live .lv-donut{max-width:min(100%,50vh)}
+  #page-live .lv-legend{gap:.26vw;padding:.26vw 1.15vw 0}
+  #page-live .lv-leg{grid-template-columns:1.88vw minmax(0,1fr) 4.8vw 4.8vw;gap:.83vw;padding:.36vw .42vw;border-radius:.42vw}
+  #page-live .lv-leg .sq{width:1.77vw;height:1.77vw;border-radius:.42vw}
+  #page-live .lv-leg .n{font-size:1.7vw}
+  #page-live .lv-leg .c{font-size:1.77vw}
+  #page-live .lv-leg .p{font-size:1.72vw}
 }
 @media(max-width:720px){
   #page-live .lv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}

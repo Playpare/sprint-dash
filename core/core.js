@@ -286,12 +286,42 @@ function bindSprintBurnHover(canvas,chartKey){
 // "unauthorized", so a public repo / known URL alone can't read the data.
 function tok(){ return '&token=' + encodeURIComponent(window._accessToken || '') + '&space=' + encodeURIComponent(window._space || ''); }
 
-function fetchData(){
+// Offset between the server clock and this device's clock. Some TVs have the
+// wrong time/timezone set, which skewed the sprint countdowns by hours.
+var _clockSkew = 0;
+try { _clockSkew = +localStorage.getItem('clockSkew') || 0; } catch(e){}
+function nowMs(){ return Date.now() + _clockSkew; }
+
+// Google sometimes answers with an HTML error page (Sheet busy while a sync
+// writes, Apps Script hiccup) or a JSON 'server' error. Those are retried a
+// couple of times before the error screen is shown.
+function fetchData(attempt){
+  attempt = attempt || 0;
   var email = encodeURIComponent(window._userEmail || '');
+  var sentAt = Date.now();
   return fetch(API+'?email='+email+tok(), {method:'GET',redirect:'follow',cache:'no-cache'})
     .then(function(r){return r.text();})
     .then(function(t){
-      var parsed = JSON.parse(t.trim());
+      var parsed;
+      try { parsed = JSON.parse(t.trim()); }
+      catch(e){
+        // Show what Google actually sent (page title / first words) so the cause can be seen.
+        var title=(t.match(/<title>([^<]*)<\/title>/i)||[])[1]||'';
+        var body=t.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,200);
+        parsed = { error:'server', message:'Google returned a web page instead of data'+(title?' — "'+title+'"':'')+(body?' · '+body:'') };
+        console.warn('[fetchData] non-JSON reply (attempt '+(attempt+1)+'):', t.slice(0,2000));
+      }
+      if(parsed.error === 'server'){
+        if(attempt < 2) return new Promise(function(res){ setTimeout(res, 2000*(attempt+1)); }).then(function(){ return fetchData(attempt+1); });
+        throw new Error(parsed.message || 'Server error');
+      }
+      if(typeof parsed.serverNow === 'number'){
+        var recvAt = Date.now();
+        _clockSkew = parsed.serverNow - (sentAt + recvAt) / 2;
+        // Ignore sub-minute drift (network latency noise); only correct real clock errors
+        if(Math.abs(_clockSkew) < 6e4) _clockSkew = 0;
+        try { localStorage.setItem('clockSkew', String(_clockSkew)); } catch(e){}
+      }
       if(parsed.error === 'unauthorized'){
         // Session expired or access revoked
         localStorage.removeItem('dashUser');
@@ -390,6 +420,7 @@ function switchPage(page){
   currentPage = page;
   // Live View hides the top bar (except Sync Now) and the tab row.
   document.getElementById('root').classList.toggle('live-mode', page === 'live');
+  lvToggleSidebar(false);
   // Reset breakdown box if leaving team page
   var bd = document.getElementById('bdBox');
   if(bd) bd.style.display = 'none';
@@ -1257,6 +1288,17 @@ function toggleSidebar(){
   // collapse transition (CSS transition is .2s; give it a beat to settle).
   setTimeout(positionSidebarIndicator, 220);
 }
+// Live View: the sidebar is hidden and the top-left logo opens/closes it as an
+// overlay. Picking anything in the sidebar closes it again.
+function lvToggleSidebar(open){
+  var root=document.getElementById('root'); if(!root) return;
+  if(open===undefined) open=!root.classList.contains('lv-sb-open');
+  root.classList.toggle('lv-sb-open', !!open);
+  if(open) setTimeout(positionSidebarIndicator, 50);
+}
+document.addEventListener('click', function(e){
+  if(e.target.closest && e.target.closest('#sidebar .sb-item')) lvToggleSidebar(false);
+});
 // Hover text of the sidebar arrow follows the state.
 function syncSidebarToggle(){
   var b=document.getElementById('sbToggle'), sb=document.getElementById('sidebar'); if(!b||!sb) return;
@@ -1346,9 +1388,9 @@ function updateSyncBar(json){
   }
 }
 
-// Incremental sync runs every 30 min (Code.gs setupIncrementalTrigger), so the
-// next one is due 30 min after the last sync, e.g. "1:30 PM PKT (in 12m) · every 30 min".
-var SYNC_EVERY_MIN = 30;
+// Incremental sync runs every 10 min (Code.gs setupIncrementalTrigger), so the
+// next one is due 10 min after the last sync, e.g. "1:40 PM PKT (in 3m) · every 10 min".
+var SYNC_EVERY_MIN = 10;
 function getNextSyncTime(lastSync){
   var now = new Date();
   if(lastSync && !isNaN(lastSync.getTime())){
@@ -1455,7 +1497,7 @@ function setDashboardLoadProgress(value, status){
   if(msg && status) msg.textContent=status;
 }
 // Loading bar — shown on every normal load (browser refresh, switching space,
-// Sync Now, Snapshot, saving leave …). Only the automatic 30-min refresh
+// Sync Now, Snapshot, saving leave …). Only the automatic 2-min refresh
 // (silentRefresh) updates without it. The bar keeps moving the whole time —
 // quickly to ~70%, then slowly towards 95% — and the text says what it is
 // waiting for, so a slow reply never looks frozen.
@@ -1488,7 +1530,8 @@ function startDashboardLoader(kind){
 }
 // Earlier versions kept a copy of each space's data in the browser; remove it.
 function clearDashCache(){
-  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('dashCache:')===0) localStorage.removeItem(k); }); }catch(e){}
+  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('dashCache:')===0 || k.indexOf('dashSnap:')===0) localStorage.removeItem(k); }); }catch(e){}
+  try{ if(window.indexedDB) indexedDB.deleteDatabase('sprintDash'); }catch(e){}
 }
 clearDashCache();
 function finishDashboardLoader(callback){
@@ -1566,11 +1609,12 @@ function applyDashData(json, preserveSprint, loadSeq, requestedSpace){
 }
 
 // ── Quiet auto-refresh ──
-// The Sheet is updated by the 30-min Jira sync. Every few minutes the dashboard
+// The Sheet is updated by the 10-min Jira sync. Every 2 minutes the dashboard
 // checks the Sheet in the background; when a newer sync is there, the numbers
 // and charts are redrawn in place — no loading bar, same page, same sprint,
-// same scroll position, no chart animation.
-var AUTO_REFRESH_MIN = 10;
+// same scroll position, no chart animation. So a screen (e.g. the TV) shows
+// new Jira data at most ~2 min after each sync, without anyone touching it.
+var AUTO_REFRESH_MIN = 2;
 var _silentBusy = false;
 function silentRefresh(){
   if(_silentBusy || !raw || !window._userEmail || document.hidden) return;

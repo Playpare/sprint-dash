@@ -14,15 +14,38 @@ var LV_STATUS_ORDER=['done','to do','in progress','in review','paused'];
 // Any other Jira status (not one of the five above) gets the next colour here.
 var LV_EXTRA_COLORS=['#22c4c4','#5b6ef5','#ff8fab','#0aaa62','#ffc56b','#d98a0b'];
 
-function lvMonDay(v){
+function lvMonDay(v, pkt){
   var x=v instanceof Date?v:pd(v);
-  return x?x.toLocaleDateString('en-US',{month:'short',day:'2-digit'}).toUpperCase():'—';
+  return x?x.toLocaleDateString('en-US',pkt?{month:'short',day:'2-digit',timeZone:'Asia/Karachi'}:{month:'short',day:'2-digit'}).toUpperCase():'—';
+}
+
+// Live View uses Pakistan time (server-corrected clock, see nowMs in core.js)
+// for "today", so a TV with the wrong time / timezone still shows the right
+// sprint day, days left and midnight switch.
+function lvToday(){
+  var p=new Date(nowMs()+5*36e5);   // PKT = UTC+5, no DST
+  return new Date(p.getUTCFullYear(),p.getUTCMonth(),p.getUTCDate());
+}
+// Fully elapsed working days before today (same rule as the space's dDone).
+function lvDaysDone(d){
+  var sp=d.spInfo||{}, sd=pd(sp.start), ed=pd(sp.end), tot=d.dTot||0, today=lvToday();
+  if(!sd||!ed) return d.dDone||0;
+  sd=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate()); ed=new Date(ed.getFullYear(),ed.getMonth(),ed.getDate());
+  if(today<=sd) return 0;
+  if(today>ed) return tot;
+  var prev=new Date(today); prev.setDate(prev.getDate()-1);
+  return Math.min(tot, sprintWorkingDayCount(sd, prev));
 }
 function lvHrs(v,unit){ return Math.round(v||0)+(unit||' hrs'); }
 
+// TV screens (same query as the TV block in live-view.css): canvas text on the
+// charts is scaled like the CSS, i.e. desktop px × (screen width ÷ 1920).
+var LV_TV_MQ='(min-width:861px) and (max-width:1200px) and (orientation:landscape) and (min-height:450px)';
+function lvK(){ return (window.matchMedia && window.matchMedia(LV_TV_MQ).matches) ? window.innerWidth/1920 : 1; }
+
 // Working days left (today included while it is a sprint day) × Σ daily hours of the sprint's people.
 function lvTimeLeft(d){
-  var daysLeft=Math.max(0,(d.dTot||0)-(d.dDone||0));
+  var daysLeft=Math.max(0,(d.dTot||0)-lvDaysDone(d));
   var cap={};
   Object.keys(d.teamCapacity||{}).forEach(function(k){ var c=d.teamCapacity[k]; cap[normPersonName(c.name||k)]=parseFloat(c.hours)||6; });
   var perDay=(d.assignees||[]).filter(function(a){ return a && a.n && a.n!=='Unassigned'; })
@@ -36,17 +59,17 @@ function lvCountdown(d){
   if(!end||isNaN(end)){ var e2=pd(sp.end); if(e2) end=new Date(e2.getFullYear(),e2.getMonth(),e2.getDate(),23,59,59); }
   var el=document.getElementById('lvCount'), lb=document.getElementById('lvCountL');
   if(!el) return;
-  var day=new Date().toDateString();
+  var day=lvToday().getTime();
   function tick(){
     if(!document.body.contains(el)){ clearInterval(_lvTimer); _lvTimer=null; return; }
-    // New day (e.g. past midnight): recount sprint day / days left / time left
+    // New day (past midnight PKT): recount sprint day / days left / time left
     // straight away instead of waiting for the next sync.
-    var today=new Date().toDateString();
+    var today=lvToday().getTime();
     if(today!==day){
       day=today;
       if(currentPage==='live' && raw && cur){ clearInterval(_lvTimer); _lvTimer=null; render(process(raw,cur)); return; }
     }
-    var ms=end?Math.max(0,end.getTime()-Date.now()):0;
+    var ms=end?Math.max(0,end.getTime()-nowMs()):0;
     var dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4);
     // LINE Seed Sans has proportional digits only, so each digit gets a fixed-width
     // box — the countdown doesn't shift sideways when a digit changes.
@@ -56,7 +79,7 @@ function lvCountdown(d){
     if(lb) lb.textContent=(sp.state==='closed'||sp.completed)?'Sprint completed':(ms<=0?'Sprint ended':'Time Remaining');
     if(ms<=0 && _lvTimer){ clearInterval(_lvTimer); _lvTimer=null; }
   }
-  tick(); if(end && end>new Date()) _lvTimer=setInterval(tick,1000);
+  tick(); if(end && end.getTime()>nowMs()) _lvTimer=setInterval(tick,1000);
 }
 
 // Right padding the burndown needs so the ideal-gap label fits beside the latest
@@ -64,9 +87,10 @@ function lvCountdown(d){
 function lvLabelRoom(ch, last, B, gap, unit){
   if(B.notStarted || !ch || !ch.ctx) return 6;
   var txt=gap>0.5?'+'+Math.round(gap)+unit.trim()+' BEHIND IDEAL':(gap<-0.5?Math.round(-gap)+unit.trim()+' AHEAD OF IDEAL':'ON IDEAL');
-  ch.ctx.save(); ch.ctx.font='800 23px '+LV_FONT; var pw=ch.ctx.measureText(txt).width+24; ch.ctx.restore();
+  var k=lvK();
+  ch.ctx.save(); ch.ctx.font='800 '+Math.round(23*k)+'px '+LV_FONT; var pw=ch.ctx.measureText(txt).width+24*k; ch.ctx.restore();
   var f=Math.max(0.01,Math.min(1,(last[0]-B.start)/Math.max(1,B.end-B.start)));
-  var W=ch.width, axis=70, A=W-axis;              // ≈ y-axis label width on the left
+  var W=ch.width, axis=70*k, A=W-axis;            // ≈ y-axis label width on the left
   // Point sits at axis + f·(A − r); label needs point + 6 + pw ≤ W − 4.
   var r=(axis+f*A+10+pw-W)/f;
   return Math.max(6, Math.ceil(r)+8);
@@ -84,7 +108,7 @@ function lvBurn(B, dayNo){
   var guide=gT.map(function(t){ return {x:t,y:Math.round(idealAt(t)*100)/100}; });
   var rem=pts.map(function(x){return {x:x[0],y:x[1]};}), spent=pts.map(function(x){return {x:x[0],y:x[2]};});
   var last=pts[pts.length-1], gap=last[1]-idealAt(last[0]);
-  var font=LV_FONT;
+  var font=LV_FONT, k=lvK();
   var shade={id:'lvShade',beforeDatasetsDraw:function(ch){ var a=ch.chartArea,x=ch.scales.x,ctx=ch.ctx; ctx.save(); ctx.fillStyle=isDark?'rgba(150,160,220,.07)':'rgba(0,0,0,.05)';
     nw.forEach(function(r){ var x0=Math.max(a.left,x.getPixelForValue(r[0])), x1=Math.min(a.right,x.getPixelForValue(r[1])); if(x1>x0) ctx.fillRect(x0,a.top,x1-x0,a.bottom-a.top); }); ctx.restore(); }};
   // "DAY N" chip above the latest point, "+Xh BEHIND IDEAL" pill to its right.
@@ -92,16 +116,17 @@ function lvBurn(B, dayNo){
     if(B.notStarted) return;
     var ctx=ch.ctx, px=ch.scales.x.getPixelForValue(last[0]), py=ch.scales.y.getPixelForValue(last[1]), a=ch.chartArea;
     function pill(txt, x, y, bg, bd, fg, size){
+      size=Math.round(size*k);
       ctx.font='800 '+size+'px '+font;
-      var w=ctx.measureText(txt).width+24, h=size+16;
+      var w=ctx.measureText(txt).width+24*k, h=size+16*k;
       // May use the chart's right margin (up to the canvas edge) so it stays clear
       // of the lines; only pushed left when even that isn't enough.
       if(x+w>ch.width-4) x=ch.width-4-w;
       if(y<a.top) y=a.top;
       if(y+h>a.bottom-2) y=a.bottom-2-h;   // stay above the date labels (e.g. when 0h is left)
-      ctx.beginPath(); ctx.roundRect(x,y,w,h,6); ctx.fillStyle=bg; ctx.fill();
+      ctx.beginPath(); ctx.roundRect(x,y,w,h,6*k); ctx.fillStyle=bg; ctx.fill();
       if(bd){ ctx.lineWidth=1.5; ctx.strokeStyle=bd; ctx.stroke(); }
-      ctx.fillStyle=fg; ctx.textBaseline='middle'; ctx.fillText(txt,x+12,y+h/2+1);
+      ctx.fillStyle=fg; ctx.textBaseline='middle'; ctx.fillText(txt,x+12*k,y+h/2+1);
       return {x:x,y:y,w:w,h:h};
     }
     ctx.save();
@@ -109,14 +134,14 @@ function lvBurn(B, dayNo){
     var txt=behind?'+'+Math.round(gap)+unit.trim()+' BEHIND IDEAL':(ahead?Math.round(-gap)+unit.trim()+' AHEAD OF IDEAL':'ON IDEAL');
     var col=behind?'#f05252':'#18c97a';
     var fg=behind?(isDark?'#ffd0d0':'#b42323'):(isDark?'#8ff0c2':'#0a7a48');
-    var p=pill(txt, px+6, py-19, behind?'rgba(240,82,82,.22)':'rgba(24,201,122,.2)', col, fg, 23);
+    var p=pill(txt, px+6*k, py-19*k, behind?'rgba(240,82,82,.22)':'rgba(24,201,122,.2)', col, fg, 23);
     // "DAY N" sits above the pill; below it when there is no room at the top.
-    var dayH=20+16, dayY=p.y-dayH-8;
-    if(dayY<a.top) dayY=p.y+p.h+8;
+    var dayH=(20+16)*k, dayY=p.y-dayH-8*k;
+    if(dayY<a.top) dayY=p.y+p.h+8*k;
     pill('DAY '+dayNo, p.x, dayY, isDark?'rgba(150,160,220,.28)':'rgba(0,0,0,.12)', null, isDark?'#fff':'#1a1d2e', 20);
     ctx.restore();
   }};
-  var tick={color:c.text,font:{family:font,size:17,weight:'800'}};   // axis numbers / dates: ExtraBold
+  var tick={color:c.text,font:{family:font,size:Math.round(17*k),weight:'800'}};   // axis numbers / dates: ExtraBold
   // Zoomed in: the y axis stops just above the highest value instead of the next big round number.
   var topVal=Math.max(startVal, Math.max.apply(null,pts.map(function(x){return Math.max(x[1]||0,x[2]||0);})));
   var yStep=topVal>400?50:(topVal>150?25:(topVal>40?10:5));
@@ -143,7 +168,7 @@ function lvBurn(B, dayNo){
     plugins:{legend:{display:false},tooltip:{enabled:false}},
     scales:{
       x:{type:'linear',min:B.start,max:B.end,grid:{display:false},border:{display:false},
-        ticks:Object.assign({stepSize:3*864e5,maxRotation:0,callback:function(v){ return lvMonDay(new Date(v)); }},tick)},
+        ticks:Object.assign({stepSize:3*864e5,maxRotation:0,callback:function(v){ return lvMonDay(new Date(v), true); }},tick)},
       y:{beginAtZero:true,max:yMax,grid:{color:c.grid},border:{display:false},
         ticks:Object.assign({maxTicksLimit:8,callback:function(v){ return v?Math.round(v)+unit.trim():''; }},tick)}}}});
   // Everything the hover pop-up needs to work out the values at any moment.
@@ -184,7 +209,7 @@ function lvBurnHover(e){
   ch._lvHover={t:t, rows:rows}; ch.draw();
   if(!tip){ tip=document.createElement('div'); tip.id='lvBTooltip'; tip.className='nv-chart-tooltip lv-burn-tip'; document.body.appendChild(tip); }
   tip.style.borderColor='var(--bor)';
-  tip.innerHTML='<div class="lv-bt-t">'+new Date(t).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true})+'</div>'
+  tip.innerHTML='<div class="lv-bt-t">'+new Date(t).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'Asia/Karachi'})+'</div>'
     +rows.map(function(r){ return '<div class="lv-bt-r"><span class="dot" style="background:'+r.c+'"></span>'+r.l+'<span class="value">'+(r.v==null?'—':rnd(r.v)+(r.s==='h'?'h':r.s.trim()))+'</span></div>'; }).join('');
   tip.classList.add('show');
   var w=tip.offsetWidth, h=tip.offsetHeight, left=e.clientX+18;
@@ -215,7 +240,7 @@ function lvSizeCenter(ch){
   // Numbers are ~0.62em wide per digit in LINE Seed Sans; aim for ~70% of the hole's width, max ~48% of its height.
   var fs=Math.min(hole*0.70/(digits*0.62), hole*0.48);
   v.style.fontSize=Math.round(fs)+'px';
-  if(l){ l.style.fontSize=Math.round(Math.max(13, fs*0.24))+'px'; l.style.marginTop=Math.round(fs*0.06)+'px'; l.style.letterSpacing='.04em'; }
+  if(l){ l.style.fontSize=Math.round(Math.max(13*lvK(), fs*0.24))+'px'; l.style.marginTop=Math.round(fs*0.06)+'px'; l.style.letterSpacing='.04em'; }
 }
 
 function doLiveView(d){
@@ -228,8 +253,8 @@ function doLiveView(d){
   lvCountdown(d);
 
   // Day number = today's sprint day (D1…DN; D0 = planning day).
-  var today=new Date(), sd=pd(sp.start), ed=pd(sp.end), dayNo=0;
-  if(sd && today>=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate()+1)) dayNo=Math.min(d.dTot||0,(d.dDone||0)+1);
+  var today=lvToday(), sd=pd(sp.start), ed=pd(sp.end), dayNo=0;
+  if(sd && today>=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate()+1)) dayNo=Math.min(d.dTot||0,lvDaysDone(d)+1);
   if(ed && today>new Date(ed.getFullYear(),ed.getMonth(),ed.getDate(),23,59,59)) dayNo=d.dTot||0;
 
   // Burndown + totals
