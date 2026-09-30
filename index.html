@@ -13,12 +13,12 @@
 <!-- Apps Script web app (Deploy → Manage deployments → Web app URL, ends in /exec).
      This is the only place to change it. -->
 <script>var API='https://script.google.com/macros/s/AKfycby_TtWaBhGyFgHFqCvVJrfeh_c3WLtPHAMfCGrecjgmeWwLi1LH6LyaY1dsfsKIps2o/exec';</script>
-<script>var DASH_VERSION='20260929-31';</script>
-<link rel="stylesheet" id="coreCss" href="core/core.css?v=20260929-31">
+<script>var DASH_VERSION='20260930-14';</script>
+<link rel="stylesheet" id="coreCss" href="core/core.css?v=20260930-14">
 <!-- the selected space's spaces/<name>/space.css is inserted here -->
-<link rel="stylesheet" href="reports/reports.css?v=20260929-31">
-<link rel="stylesheet" href="admin/admin.css?v=20260929-31">
-<link rel="stylesheet" href="live-view/live-view.css?v=20260929-31">
+<link rel="stylesheet" href="reports/reports.css?v=20260930-14">
+<link rel="stylesheet" href="admin/admin.css?v=20260930-14">
+<link rel="stylesheet" href="live-view/live-view.css?v=20260930-14">
 </head>
 <body>
 <div class="d" id="root">
@@ -83,6 +83,9 @@
       <button class="sb-logout" onclick="logoutUser()" title="Logout"><svg class="icn" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg></button>
     </div>
   </aside>
+  <!-- Live View only: the sidebar is hidden; this small arrow tab (left edge) opens it as an overlay -->
+  <button class="lv-sb-tab" id="lvLogo" onclick="lvToggleSidebar()" title="Menu" aria-label="Open menu"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+  <div class="lv-sb-backdrop" id="lvSbBackdrop" onclick="lvToggleSidebar(false)"></div>
 
   <!-- Main content -->
   <main class="main-area">
@@ -204,10 +207,10 @@
 </div>
 <!-- end of #root -->
 
-<script src="core/core.js?v=20260929-31"></script>
-<script src="reports/reports.js?v=20260929-31"></script>
-<script src="admin/admin.js?v=20260929-31"></script>
-<script src="live-view/live-view.js?v=20260929-31"></script>
+<script src="core/core.js?v=20260930-14"></script>
+<script src="reports/reports.js?v=20260930-14"></script>
+<script src="admin/admin.js?v=20260930-14"></script>
+<script src="live-view/live-view.js?v=20260930-14"></script>
 <!-- the selected space's spaces/<name>/space.js is loaded by core.js -->
 <script>
 // ── On page load ──

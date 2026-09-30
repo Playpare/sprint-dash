@@ -1215,7 +1215,7 @@ function doCompletionCountdown(d){
   if(!cd) return;
   function tick(){
     if(!document.body.contains(cd)){ clearInterval(_cdTimer); _cdTimer=null; return; }
-    var ms=end?Math.max(0,end.getTime()-Date.now()):0;
+    var ms=end?Math.max(0,end.getTime()-nowMs()):0;
     var dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4), ss=Math.floor(ms%6e4/1e3);
     cd.className='nv-cd'+(ms<=0?' ended':'');
     cd.innerHTML=[[dd,'Days'],[hh,'Hrs'],[mm,'Min'],[ss,'Sec']].map(function(x){ return '<div class="nv-cd-b"><div class="v">'+String(x[0]).padStart(2,'0')+'</div><div class="l">'+x[1]+'</div></div>'; }).join('');
@@ -1225,7 +1225,7 @@ function doCompletionCountdown(d){
     }
     if(ms<=0 && _cdTimer){ clearInterval(_cdTimer); _cdTimer=null; }
   }
-  tick(); if(end && end>new Date()) _cdTimer=setInterval(tick,1000);
+  tick(); if(end && end.getTime()>nowMs()) _cdTimer=setInterval(tick,1000);
 }
 function nvCompletionDetail(k){
   var d=window._sprintData; if(!d||!d.completion) return;
