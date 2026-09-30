@@ -177,3 +177,18 @@
 .nv-ov-info .nv-dept.mssd-dept .nm{font-size:14px}
 .nv-ov-info .nv-dept .pc{font-size:19px;line-height:1}
 .nv-ov-info .nv-dept .mt{font-size:11px;line-height:1.35;color:var(--mut)}
+
+/* TVs: most TV browsers report a 1080p/4K screen as ~960×540 CSS px, which put
+   the MMS pages in their tablet layout. On landscape screens in this range the
+   whole dashboard (not Live View — it has its own TV sizing) is zoomed to
+   width ÷ 1920 (--tvz, set in space.js), so it lays out exactly like the
+   1920px desktop view, just smaller. 100vh heights are divided by the zoom so
+   they still fill the screen, and the few ≤1300px breakpoints are put back to
+   their desktop values. Same query as LV_TV_MQ in live-view.js. */
+@media (min-width:861px) and (max-width:1200px) and (orientation:landscape) and (min-height:450px){
+  #root:not(.live-mode){zoom:var(--tvz,1);min-height:calc(100vh / var(--tvz,1))}
+  #root:not(.live-mode) .app-shell{min-height:calc(100vh / var(--tvz,1))}
+  #root:not(.live-mode) .sidebar{height:calc(100vh / var(--tvz,1))}
+  #root:not(.live-mode) .nv-ov-top{grid-template-columns:2fr 2fr 1fr 1fr}
+  #root:not(.live-mode) .nv-ov-info{grid-template-columns:1.25fr 1fr}
+}
