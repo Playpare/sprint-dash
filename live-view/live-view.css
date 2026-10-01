@@ -128,12 +128,13 @@
   #page-live .lv-donut-c .v{font-size:68px}
   #page-live .lv-donut-c .l{font-size:19px}
 }
-/* TVs: most TV browsers report a 1080p/4K screen as ~960×540 CSS px, which fell
-   into the stacked layout above. Landscape screens in this range keep the
-   desktop side-by-side layout, with every size in vw (desktop px ÷ 1920) so it
-   looks like the 1920px desktop view scaled down. Keep this query in sync with
+/* TVs: TV browsers report a 1080p/4K screen as a smaller CSS size (e.g.
+   960×540 or 1280×720), which fell into the stacked or cramped layouts.
+   Every landscape screen narrower than 1920 keeps the desktop side-by-side
+   layout, with every size in vw (desktop px ÷ 1920) so it looks exactly like
+   the 1920px desktop view scaled to the screen. Keep this query in sync with
    LV_TV_MQ in live-view.js (chart text scales with it). */
-@media (min-width:861px) and (max-width:1200px) and (orientation:landscape) and (min-height:450px){
+@media (min-width:861px) and (max-width:1919px) and (orientation:landscape) and (min-height:450px){
   #root.live-mode .main-area{height:100vh;min-height:0;overflow:hidden}
   #root.live-mode .page-content{height:100vh;min-height:0;flex:none;overflow:hidden;padding:1.15vw 1.46vw}
   #root.live-mode .lv-sb-tab{top:.94vw;width:12px;height:28px}   /* fits the 1.46vw left padding */
