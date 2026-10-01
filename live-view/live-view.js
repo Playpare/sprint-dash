@@ -243,11 +243,70 @@ function lvSizeCenter(ch){
   if(l){ l.style.fontSize=Math.round(Math.max(13*lvK(), fs*0.24))+'px'; l.style.marginTop=Math.round(fs*0.06)+'px'; l.style.letterSpacing='.04em'; }
 }
 
+// ── Slideshow ──
+// Team view for 10 min, then each person with an individual burndown (same
+// people as the MMS Team page's individual chart) for 1 min each, then back to
+// the team. Same layout on every slide: the burndown, the 4 stat boxes and the
+// status donut show that person's numbers only. The slide position survives the
+// quiet auto-refresh / midnight re-render; leaving Live View resets it.
+var LV_MAIN_MS=8*60e3, LV_PERSON_MS=60e3;
+var _lvShow={idx:0, start:0, timer:null};   // idx 0 = team, 1..n = people[idx-1]
+function lvPeople(d){
+  var B=d && d.burn;
+  if(!B || !B.p || !B.p.length || !B.people) return [];
+  return Object.keys(B.people).filter(function(n){ return (B.people[n]||[]).length; }).sort();
+}
+function lvSlideMs(){ return _lvShow.idx ? LV_PERSON_MS : LV_MAIN_MS; }
+function lvShowTick(){
+  if(currentPage!=='live' || !document.getElementById('page-live')){
+    clearInterval(_lvShow.timer); _lvShow.timer=null; _lvShow.idx=0; return;
+  }
+  if(Date.now()-_lvShow.start < lvSlideMs()) return;
+  var d=window._sprintData, n=lvPeople(d).length;
+  _lvShow.idx = _lvShow.idx>=n ? 0 : _lvShow.idx+1;
+  _lvShow.start=Date.now();
+  if(!d) return;
+  var w=document.querySelector('#page-live .lv-wrap');
+  if(!w){ doLiveView(d); return; }
+  w.classList.add('lv-out');                                                  // fade out (0.7s)…
+  setTimeout(function(){
+    if(currentPage!=='live') return;
+    doLiveView(window._sprintData||d);                                        // …redraw while invisible…
+    // …and fade in only after the new slide has been painted, so the chart
+    // rebuild never happens during the fade.
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      var w2=document.querySelector('#page-live .lv-wrap'); if(w2) w2.classList.remove('lv-out');
+    }); });
+  }, 750);
+}
+// Thin line at the top of the card that fills up until the next slide.
+function lvSlideProgress(){
+  var bar=document.getElementById('lvProg'); if(!bar) return;
+  var dur=lvSlideMs(), done=Math.min(1,(Date.now()-_lvShow.start)/dur);
+  bar.style.transition='none'; bar.style.width=(done*100)+'%';
+  void bar.offsetWidth;
+  bar.style.transition='width '+Math.max(0,(1-done)*dur)+'ms linear'; bar.style.width='100%';
+}
+function lvPersonHours(d, name){
+  var h=null;
+  Object.keys(d.teamCapacity||{}).forEach(function(k){ var c=d.teamCapacity[k]; if(normPersonName(c.name||k)===normPersonName(name)) h=parseFloat(c.hours)||6; });
+  return h!=null?h:6;
+}
+
 function doLiveView(d){
   lvWhenFontReady(d);
   if(!document.getElementById('page-live')) return;
+  if(!_lvShow.timer){ _lvShow.idx=0; _lvShow.start=Date.now(); _lvShow.timer=setInterval(lvShowTick,1000); }
+  var people=lvPeople(d);
+  if(_lvShow.idx>people.length) _lvShow.idx=0;
+  var person=_lvShow.idx ? people[_lvShow.idx-1] : null;
+  lvSlideProgress();
   var sp=d.spInfo||{};
-  document.getElementById('lvTitle').textContent=sp.id||cur;
+  var titleEl=document.getElementById('lvTitle');
+  titleEl.textContent=person||sp.id||cur;
+  titleEl.classList.toggle('is-person', !!person);
+  var capEl=document.getElementById('lvCap');
+  if(capEl) capEl.textContent=person ? (sp.id||cur)+' · Individual '+_lvShow.idx+' / '+people.length : '';
   document.getElementById('lvStart').textContent=lvMonDay(sp.start);
   document.getElementById('lvEnd').textContent=lvMonDay(sp.end);
   lvCountdown(d);
@@ -261,14 +320,16 @@ function doLiveView(d){
   var B=d.burn, wrap=document.getElementById('lvChartWrap'), total, left, unit=' hrs';
   if(B && B.p && B.p.length){
     if(!wrap.querySelector('canvas')) wrap.innerHTML='<canvas id="lvC"></canvas>';
-    var r=lvBurn(B, dayNo);
+    // Person slide: same chart, drawn from that person's burndown points.
+    var r=lvBurn(person ? Object.assign({}, B, {p:B.people[person]}) : B, dayNo);
     total=r.start; left=r.left; if(B.unit!=='h') unit=' pts';
   } else {
     if(CH.lv){ CH.lv.destroy(); CH.lv=null; }
     wrap.innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
     total=d.totEst||0; left=Math.max(0,(d.totEst||0)-(d.totLog||0));
   }
-  var timeLeft=lvTimeLeft(d), behind=left-timeLeft;
+  // Person: working days left × their own daily hours (Team Capacity, 6h default).
+  var timeLeft=person ? Math.max(0,(d.dTot||0)-lvDaysDone(d))*lvPersonHours(d, person) : lvTimeLeft(d), behind=left-timeLeft;
   document.getElementById('lvTotal').textContent=lvHrs(total,unit);
   document.getElementById('lvLeft').textContent=lvHrs(left,unit);
   document.getElementById('lvTime').textContent=lvHrs(timeLeft);
@@ -283,6 +344,12 @@ function doLiveView(d){
   var rank=function(r){ var i=LV_STATUS_ORDER.indexOf(String(r.name||'').toLowerCase()); return i<0?99:i; };
   var so={total:so0.total, rows:(so0.rows||[]).map(function(r,i){ return {r:r,i:i}; })
     .sort(function(a,b){ return (rank(a.r)-rank(b.r))||(a.i-b.i); }).map(function(x){ return x.r; })};
+  if(person){
+    // Person slide: only their work items, same statuses / order / colours as the team slide.
+    var mine=function(t){ return normPersonName(t.assignee)===normPersonName(person); };
+    so.rows=so.rows.map(function(r){ var it=(r.items||[]).filter(mine); return {name:r.name, cat:r.cat, n:it.length, items:it}; });
+    so.total=so.rows.reduce(function(s,r){ return s+r.n; },0);
+  }
   var ex=0, cols=so.rows.map(function(row){ return LV_STATUS_COLORS[String(row.name||'').toLowerCase()]||LV_EXTRA_COLORS[ex++ % LV_EXTRA_COLORS.length]; });
   var open=function(i){ var row=so.rows[i]; if(row) nvDetail('Status · '+row.name, row.n+' work item(s)', nvTaskRows(row.items)); };
   window._lvOpen=open;

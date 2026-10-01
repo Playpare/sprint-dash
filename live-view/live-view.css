@@ -76,6 +76,23 @@
 #page-live .lv-count .l{font-size:16px;font-weight:600;color:var(--amb);margin-top:2px}
 #page-live .lv-count.ended .v,#page-live .lv-count.ended .l{color:var(--mut)}
 
+/* Slideshow (live-view.js): caption above a person's name, thin progress line
+   at the top of the card until the next slide, and a soft fade between slides. */
+#page-live .lv-main{position:relative}
+#page-live .lv-prog{position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;overflow:hidden;pointer-events:none}
+#page-live .lv-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00E5C3,#4D9FFF);opacity:.85}
+#page-live .lv-tw{min-width:0;justify-self:start}
+#page-live .lv-cap{font-size:16px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;white-space:nowrap}
+#page-live .lv-cap:empty{display:none}
+#page-live .lv-title.is-person{font-size:clamp(34px,2.4vw,48px);overflow:hidden;text-overflow:ellipsis}
+/* Pure opacity fade (no movement — cheapest for TV browsers). The card boxes
+   stay on screen; only what's inside them (header, stats, chart, donut, legend)
+   fades out, is redrawn while invisible, then fades back in. The progress line
+   stays visible. */
+#page-live .lv-wrap>.lv-card>:not(.lv-prog){transition:opacity .7s ease-in-out;will-change:opacity}
+#page-live .lv-wrap.lv-out>.lv-card>:not(.lv-prog){opacity:0}
+@media (prefers-reduced-motion: reduce){ #page-live .lv-wrap>.lv-card>:not(.lv-prog){transition:none} }
+
 /* Stat boxes */
 #page-live .lv-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
 #page-live .lv-stat{background:var(--sur2);border:1px solid var(--bor);border-radius:10px;padding:14px 18px}
@@ -128,6 +145,9 @@
   #page-live .lv-card{padding:.94vw 1.04vw;border-radius:.63vw}
   #page-live .lv-head{gap:1.04vw;margin-bottom:.83vw}
   #page-live .lv-title{font-size:3.2vw}
+  #page-live .lv-title.is-person{font-size:2.4vw}
+  #page-live .lv-cap{font-size:.83vw;margin-bottom:.21vw}
+  #page-live .lv-prog{height:2px}
   #page-live .lv-dates{gap:.63vw}
   #page-live .lv-date .v{font-size:1.56vw}
   #page-live .lv-date .l{font-size:.94vw;margin-top:.21vw}
@@ -152,7 +172,9 @@
   #page-live .lv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   #page-live .lv-title,#page-live .lv-count .v{font-size:26px}
   #page-live .lv-head{grid-template-columns:1fr;justify-items:center;text-align:center}
-  #page-live .lv-title,#page-live .lv-count{justify-self:center;text-align:center}
+  #page-live .lv-title,#page-live .lv-count,#page-live .lv-tw{justify-self:center;text-align:center}
+  #page-live .lv-title.is-person{font-size:24px}
+  #page-live .lv-cap{font-size:12px}
   #page-live .lv-chart{flex:none;height:340px}
   #page-live .lv-leg{grid-template-columns:26px minmax(0,1fr) 62px 62px;gap:10px}
   #page-live .lv-leg .sq{width:24px;height:24px}
