@@ -84,10 +84,10 @@ function lvCountdown(d){
 
 // Right padding the burndown needs so the ideal-gap label fits beside the latest
 // point without being pushed back over the lines (6px when it already fits).
-function lvLabelRoom(ch, last, B, gap, unit){
+function lvLabelRoom(ch, last, B, gap, unit, k){
   if(B.notStarted || !ch || !ch.ctx) return 6;
   var txt=gap>0.5?'+'+Math.round(gap)+unit.trim()+' BEHIND IDEAL':(gap<-0.5?Math.round(-gap)+unit.trim()+' AHEAD OF IDEAL':'ON IDEAL');
-  var k=lvK();
+  k=k||lvK();
   ch.ctx.save(); ch.ctx.font='800 '+Math.round(23*k)+'px '+LV_FONT; var pw=ch.ctx.measureText(txt).width+24*k; ch.ctx.restore();
   var f=Math.max(0.01,Math.min(1,(last[0]-B.start)/Math.max(1,B.end-B.start)));
   var W=ch.width, axis=70*k, A=W-axis;            // ≈ y-axis label width on the left
@@ -97,8 +97,12 @@ function lvLabelRoom(ch, last, B, gap, unit){
 }
 
 // Jira-style burndown in the Live View look. Returns the ideal remaining now.
-function lvBurn(B, dayNo){
-  if(CH.lv) CH.lv.destroy();
+// opt (quarter panels): {canvas, key, scale} — draw into another canvas, keep
+// the chart under CH[key], text × scale, no hover pop-up.
+function lvBurn(B, dayNo, opt){
+  opt=opt||{};
+  var cid=opt.canvas||'lvC', key=opt.key||'lv';
+  if(CH[key]) CH[key].destroy();
   var c=cc(), unit=B.unit==='h'?'h':' pts', pts=B.p;
   var nw=(B.nw||[]).slice().sort(function(a,b){return a[0]-b[0];});
   var startVal=pts[0][1], total=B.end-B.start, off=nw.reduce(function(a,r){return a+(r[1]-r[0]);},0), work=Math.max(1,total-off);
@@ -108,7 +112,7 @@ function lvBurn(B, dayNo){
   var guide=gT.map(function(t){ return {x:t,y:Math.round(idealAt(t)*100)/100}; });
   var rem=pts.map(function(x){return {x:x[0],y:x[1]};}), spent=pts.map(function(x){return {x:x[0],y:x[2]};});
   var last=pts[pts.length-1], gap=last[1]-idealAt(last[0]);
-  var font=LV_FONT, k=lvK();
+  var font=LV_FONT, k=lvK()*(opt.scale||1);
   var shade={id:'lvShade',beforeDatasetsDraw:function(ch){ var a=ch.chartArea,x=ch.scales.x,ctx=ch.ctx; ctx.save(); ctx.fillStyle=isDark?'rgba(150,160,220,.07)':'rgba(0,0,0,.05)';
     nw.forEach(function(r){ var x0=Math.max(a.left,x.getPixelForValue(r[0])), x1=Math.min(a.right,x.getPixelForValue(r[1])); if(x1>x0) ctx.fillRect(x0,a.top,x1-x0,a.bottom-a.top); }); ctx.restore(); }};
   // "DAY N" chip above the latest point, "+Xh BEHIND IDEAL" pill to its right.
@@ -157,13 +161,13 @@ function lvBurn(B, dayNo){
     h.rows.forEach(function(r){ if(r.v==null) return; ctx.beginPath(); ctx.arc(x, ch.scales.y.getPixelForValue(r.v), 4.5, 0, Math.PI*2); ctx.fillStyle=r.c; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle='#000'; ctx.stroke(); });
     ctx.restore();
   }};
-  CH.lv=new Chart(document.getElementById('lvC'),{type:'line',plugins:[shade,marker,hoverLine],data:{datasets:[
+  CH[key]=new Chart(document.getElementById(cid),{type:'line',plugins:[shade,marker,hoverLine],data:{datasets:[
     {label:'Guideline',data:guide,borderColor:'#4d7cff',borderDash:[7,6],borderWidth:2.5,pointRadius:0,pointHoverRadius:0,fill:false,tension:0},
     {label:'Remaining Values',data:rem,borderColor:'#f05252',backgroundColor:'rgba(240,82,82,.14)',fill:'origin',borderWidth:2.5,pointRadius:0,pointHoverRadius:0,stepped:'after'},
     {label:'Time Spent',data:spent,borderColor:'#18c97a',borderWidth:2.5,pointRadius:0,pointHoverRadius:0,stepped:'after',fill:false}
   ]},options:{responsive:true,maintainAspectRatio:false,parsing:false,animation:false,
     // Keep room on the right for the "BEHIND / AHEAD OF IDEAL" label next to the latest point.
-    layout:{padding:function(c){ return {top:4,right:lvLabelRoom(c.chart, last, B, gap, unit)}; }},
+    layout:{padding:function(c){ return {top:4,right:lvLabelRoom(c.chart, last, B, gap, unit, k)}; }},
     events:[],                                  // hover is handled by lvBurnHover (cursor-following pop-up)
     plugins:{legend:{display:false},tooltip:{enabled:false}},
     scales:{
@@ -171,9 +175,11 @@ function lvBurn(B, dayNo){
         ticks:Object.assign({stepSize:3*864e5,maxRotation:0,callback:function(v){ return lvMonDay(new Date(v), true); }},tick)},
       y:{beginAtZero:true,max:yMax,grid:{color:c.grid},border:{display:false},
         ticks:Object.assign({maxTicksLimit:8,callback:function(v){ return v?Math.round(v)+unit.trim():''; }},tick)}}}});
-  // Everything the hover pop-up needs to work out the values at any moment.
-  CH.lv._lvData={pts:pts, idealAt:idealAt, unit:unit, start:B.start, end:B.end};
-  lvBindBurnHover(document.getElementById('lvC'));
+  if(key==='lv'){
+    // Everything the hover pop-up needs to work out the values at any moment.
+    CH.lv._lvData={pts:pts, idealAt:idealAt, unit:unit, start:B.start, end:B.end};
+    lvBindBurnHover(document.getElementById(cid));
+  }
   return {start:startVal, left:last[1], unit:unit};
 }
 
@@ -244,44 +250,147 @@ function lvSizeCenter(ch){
 }
 
 // ── Slideshow ──
-// Team view for 10 min, then each person with an individual burndown (same
-// people as the MMS Team page's individual chart) for 1 min each, then back to
-// the team. Same layout on every slide: the burndown, the 4 stat boxes and the
-// status donut show that person's numbers only. The slide position survives the
-// quiet auto-refresh / midnight re-render; leaving Live View resets it.
-var LV_MAIN_MS=8*60e3, LV_PERSON_MS=60e3;
-var _lvShow={idx:0, start:0, timer:null};   // idx 0 = team, 1..n = people[idx-1]
+// Team view for 8 min, then the people with an individual burndown (same people
+// as the MMS Team page's individual chart) in groups of 4: the screen splits
+// into 4 equal quarters, one person each (name, dates, countdown, 4 stat boxes,
+// burndown — no donut). After 10 s the top pair slides down while the bottom
+// pair slides up; after 20 s the next 4 come in. After the last group it goes
+// back to the team view. The position survives the quiet auto-refresh /
+// midnight re-render; leaving Live View resets it.
+var LV_MAIN_MS=8*60e3, LV_GROUP_MS=20e3, LV_SWAP_MS=10e3;
+var _lvShow={idx:0, start:0, timer:null, swapped:false};   // idx 0 = team, 1..n = groups[idx-1]
 function lvPeople(d){
   var B=d && d.burn;
   if(!B || !B.p || !B.p.length || !B.people) return [];
   return Object.keys(B.people).filter(function(n){ return (B.people[n]||[]).length; }).sort();
 }
-function lvSlideMs(){ return _lvShow.idx ? LV_PERSON_MS : LV_MAIN_MS; }
+function lvGroups(d){
+  var p=lvPeople(d), g=[];
+  for(var i=0;i<p.length;i+=4) g.push(p.slice(i,i+4));
+  return g;
+}
+function lvSlideMs(){ return _lvShow.idx ? LV_GROUP_MS : LV_MAIN_MS; }
+// Time the latest Jira sync finished in Apps Script (Sync Log, sent as
+// lastSync), top-right of the donut card, e.g. "3:00 AM" (PKT, 12-hour). It
+// moves on with every completed sync (≈ every 10 min), changes or not, as soon
+// as the dashboard's 2-min refresh picks it up. lastSync arrives either as a
+// date (ISO) or as the Sync Log text "dd MMM yyyy HH:mm" in PKT.
+function lvSyncDate(v){
+  if(!v) return null;
+  var s=String(v), m=s.match(/^(\d{1,2}) (\w{3}) (\d{4}) (\d{1,2}):(\d{2})/);
+  if(m){
+    var mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(m[2]);
+    if(mon>=0) return new Date(Date.UTC(+m[3], mon, +m[1], +m[4]-5, +m[5]));   // PKT = UTC+5
+  }
+  var t=Date.parse(s); return isNaN(t) ? null : new Date(t);
+}
+function lvSyncTime(){
+  var el=document.getElementById('lvSync'); if(!el) return;
+  var d=lvSyncDate(raw && raw.lastSync);
+  el.textContent=d ? d.toLocaleTimeString('en-US',{timeZone:'Asia/Karachi',hour:'numeric',minute:'2-digit',hour12:true})+' Sync' : '';
+}
 function lvShowTick(){
   if(currentPage!=='live' || !document.getElementById('page-live')){
     clearInterval(_lvShow.timer); _lvShow.timer=null; _lvShow.idx=0; return;
   }
-  if(Date.now()-_lvShow.start < lvSlideMs()) return;
-  var d=window._sprintData, n=lvPeople(d).length;
+  var el=Date.now()-_lvShow.start;
+  // Group slide, 10 s in: top pair slides down, bottom pair slides up (CSS).
+  if(_lvShow.idx && !_lvShow.swapped && el>=LV_SWAP_MS){
+    _lvShow.swapped=true;
+    var q=document.getElementById('lvQuad'); if(q && !q.classList.contains('lvq-solo')) q.classList.add('swapped');
+  }
+  if(el < lvSlideMs()) return;
+  var d=window._sprintData, n=lvGroups(d).length;
   _lvShow.idx = _lvShow.idx>=n ? 0 : _lvShow.idx+1;
-  _lvShow.start=Date.now();
+  _lvShow.start=Date.now(); _lvShow.swapped=false;
   if(!d) return;
-  var w=document.querySelector('#page-live .lv-wrap');
-  if(!w){ doLiveView(d); return; }
-  w.classList.add('lv-out');                                                  // fade out (0.7s)…
+  var boxes=document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad');
+  if(!boxes.length){ doLiveView(d); return; }
+  boxes.forEach(function(b){ b.classList.add('lv-out'); });                  // fade out (0.7s)…
   setTimeout(function(){
     if(currentPage!=='live') return;
     doLiveView(window._sprintData||d);                                        // …redraw while invisible…
     // …and fade in only after the new slide has been painted, so the chart
     // rebuild never happens during the fade.
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
-      var w2=document.querySelector('#page-live .lv-wrap'); if(w2) w2.classList.remove('lv-out');
+      document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad').forEach(function(b){ b.classList.remove('lv-out'); });
     }); });
   }, 750);
 }
-// Thin line at the top of the card that fills up until the next slide.
+
+// Day number = today's sprint day (D1…DN; D0 = planning day).
+function lvDayNo(d){
+  var sp=d.spInfo||{}, today=lvToday(), sd=pd(sp.start), ed=pd(sp.end), dayNo=0;
+  if(sd && today>=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate()+1)) dayNo=Math.min(d.dTot||0,lvDaysDone(d)+1);
+  if(ed && today>new Date(ed.getFullYear(),ed.getMonth(),ed.getDate(),23,59,59)) dayNo=d.dTot||0;
+  return dayNo;
+}
+
+// 4 quarters, one person each: name · dates · countdown, the 4 stat boxes and
+// their burndown (smaller chart text). Slots: 0 top-left, 1 top-right,
+// 2 bottom-left, 3 bottom-right; fewer than 4 people → the rest stay empty.
+// "Last updated: 1 Oct 2026" — the newest Jira "updated" time (any change to
+// the issue: status, estimate, worklog, comment, moving it out of the sprint…)
+// across all of the person's issues the dashboard has (sprint, sub-tasks, bugs,
+// backlog). Jira sends it as "2026-10-01T10:15:30.000+0500" or the Sheet as a date.
+function lvPersonUpdated(name){
+  var best=0, me=normPersonName(name);
+  ['tasks','subtasks','bugsTasks','bugSubtasks','backlogTasks','carriedOver','containers'].forEach(function(k){
+    ((raw && raw[k]) || []).forEach(function(t){
+      if(!t || !t.updated || normPersonName(t.assignee)!==me) return;
+      var ms=Date.parse(String(t.updated).replace(/([+-]\d{2})(\d{2})$/,'$1:$2'));
+      if(ms>best) best=ms;
+    });
+  });
+  return best ? 'Last updated: '+new Date(best).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Karachi'}) : '';
+}
+function lvQuadDestroy(){ for(var i=0;i<4;i++){ if(CH['lvq'+i]){ CH['lvq'+i].destroy(); CH['lvq'+i]=null; } } }
+function lvRenderQuad(d, names, dayNo){
+  var q=document.getElementById('lvQuad'); if(!q) return;
+  lvQuadDestroy();
+  var sp=d.spInfo||{}, B=d.burn, unit=B.unit==='h'?' hrs':' pts';
+  var daysLeft=Math.max(0,(d.dTot||0)-lvDaysDone(d));
+  var stat=function(l,id){ return '<div class="lv-stat"><div class="l"'+(id?' data-k="'+id+'"':'')+'>'+l+'</div><div class="v"></div></div>'; };
+  // Layout by group size: [grid-column, grid-row, row] per person.
+  //   4 → 2 × 2 · 3 → two on top + one full-width bottom
+  //   2 → one full-width top + one full-width bottom · 1 → one full-width top (no swap)
+  var cnt=names.length;
+  var place = cnt===1 ? [['1 / -1','1','top']]
+    : cnt===2 ? [['1 / -1','1','top'],['1 / -1','2','bottom']]
+    : cnt===3 ? [['1','1','top'],['2','1','top'],['1 / -1','2','bottom']]
+    : [['1','1','top'],['2','1','top'],['1','2','bottom'],['2','2','bottom']];
+  // One progress line across the top of the screen (above the top cards) that
+  // fills up over the group's 20 s — stays put when the rows swap.
+  var html='<div class="lvq-prog"><i id="lvqProg"></i></div>';
+  for(var i=0;i<cnt;i++){
+    var n=names[i], pl=place[i];
+    html+='<div class="lv-card lvq-panel" data-slot="'+i+'" data-row="'+pl[2]+'" style="grid-column:'+pl[0]+';grid-row:'+pl[1]+'"><div class="lvq-in">'
+      +'<div class="lvq-head"><div class="lvq-name">'+escHtml(n)+'</div><div class="lvq-upd">'+escHtml(lvPersonUpdated(n))+'</div></div>'
+      +'<div class="lv-stats">'+stat('Total Work')+stat('Work Left To Do')+stat('Left To Do It')+stat('Hours Behind','b')+'</div>'
+      +'<div class="lv-chart lvq-chart"><canvas id="lvqC'+i+'"></canvas></div>'
+      +'</div></div>';
+  }
+  // New panels must appear in place (swapped or not) without sliding there.
+  q.classList.add('lvq-still');
+  q.classList.toggle('lvq-solo', cnt===1);                  // one person: stays put
+  q.classList.toggle('swapped', !!_lvShow.swapped && cnt>1);
+  q.innerHTML=html;
+  void q.offsetWidth;
+  q.classList.remove('lvq-still');
+  names.forEach(function(n,i){
+    var panel=q.querySelector('.lvq-panel[data-slot="'+i+'"]'); if(!panel) return;
+    var r=lvBurn(Object.assign({}, B, {p:B.people[n]}), dayNo, {canvas:'lvqC'+i, key:'lvq'+i, scale:.85});
+    var timeLeft=daysLeft*lvPersonHours(d, n), behind=r.left-timeLeft;
+    var v=panel.querySelectorAll('.lv-stat .v');
+    v[0].textContent=lvHrs(r.start,unit); v[1].textContent=lvHrs(r.left,unit); v[2].textContent=lvHrs(timeLeft);
+    panel.querySelector('[data-k="b"]').textContent=behind>0?'Hours Behind':'Hours Ahead';
+    v[3].textContent=lvHrs(Math.abs(behind)); v[3].className='v '+(behind>0?'bad':'good');
+  });
+}
+// Thin line at the top that fills up until the next slide (team card, or the
+// one line above the top cards on a group slide).
 function lvSlideProgress(){
-  var bar=document.getElementById('lvProg'); if(!bar) return;
+  var bar=document.getElementById(_lvShow.idx ? 'lvqProg' : 'lvProg'); if(!bar) return;
   var dur=lvSlideMs(), done=Math.min(1,(Date.now()-_lvShow.start)/dur);
   bar.style.transition='none'; bar.style.width=(done*100)+'%';
   void bar.offsetWidth;
@@ -295,41 +404,47 @@ function lvPersonHours(d, name){
 
 function doLiveView(d){
   lvWhenFontReady(d);
-  if(!document.getElementById('page-live')) return;
-  if(!_lvShow.timer){ _lvShow.idx=0; _lvShow.start=Date.now(); _lvShow.timer=setInterval(lvShowTick,1000); }
-  var people=lvPeople(d);
-  if(_lvShow.idx>people.length) _lvShow.idx=0;
-  var person=_lvShow.idx ? people[_lvShow.idx-1] : null;
+  var page=document.getElementById('page-live');
+  if(!page) return;
+  if(!_lvShow.timer){ _lvShow.idx=0; _lvShow.start=Date.now(); _lvShow.swapped=false; _lvShow.timer=setInterval(lvShowTick,1000); }
+  var groups=lvGroups(d);
+  if(_lvShow.idx>groups.length) _lvShow.idx=0;
+  var sp=d.spInfo||{}, dayNo=lvDayNo(d);
+
+  // Group slide: 4 quarters (the team view is hidden while it shows).
+  if(_lvShow.idx){
+    page.classList.add('lv-quad-on');
+    lvRenderQuad(d, groups[_lvShow.idx-1], dayNo);
+    lvSlideProgress();
+    lvCountdown(d);
+    return;
+  }
+  page.classList.remove('lv-quad-on');
+  lvQuadDestroy();
+
   lvSlideProgress();
-  var sp=d.spInfo||{};
+  lvSyncTime();
   var titleEl=document.getElementById('lvTitle');
-  titleEl.textContent=person||sp.id||cur;
-  titleEl.classList.toggle('is-person', !!person);
+  titleEl.textContent=sp.id||cur;
+  titleEl.classList.remove('is-person');
   var capEl=document.getElementById('lvCap');
-  if(capEl) capEl.textContent=person ? (sp.id||cur) : '';
+  if(capEl) capEl.textContent='';
   document.getElementById('lvStart').textContent=lvMonDay(sp.start);
   document.getElementById('lvEnd').textContent=lvMonDay(sp.end);
   lvCountdown(d);
-
-  // Day number = today's sprint day (D1…DN; D0 = planning day).
-  var today=lvToday(), sd=pd(sp.start), ed=pd(sp.end), dayNo=0;
-  if(sd && today>=new Date(sd.getFullYear(),sd.getMonth(),sd.getDate()+1)) dayNo=Math.min(d.dTot||0,lvDaysDone(d)+1);
-  if(ed && today>new Date(ed.getFullYear(),ed.getMonth(),ed.getDate(),23,59,59)) dayNo=d.dTot||0;
 
   // Burndown + totals
   var B=d.burn, wrap=document.getElementById('lvChartWrap'), total, left, unit=' hrs';
   if(B && B.p && B.p.length){
     if(!wrap.querySelector('canvas')) wrap.innerHTML='<canvas id="lvC"></canvas>';
-    // Person slide: same chart, drawn from that person's burndown points.
-    var r=lvBurn(person ? Object.assign({}, B, {p:B.people[person]}) : B, dayNo);
+    var r=lvBurn(B, dayNo);
     total=r.start; left=r.left; if(B.unit!=='h') unit=' pts';
   } else {
     if(CH.lv){ CH.lv.destroy(); CH.lv=null; }
     wrap.innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
     total=d.totEst||0; left=Math.max(0,(d.totEst||0)-(d.totLog||0));
   }
-  // Person: working days left × their own daily hours (Team Capacity, 6h default).
-  var timeLeft=person ? Math.max(0,(d.dTot||0)-lvDaysDone(d))*lvPersonHours(d, person) : lvTimeLeft(d), behind=left-timeLeft;
+  var timeLeft=lvTimeLeft(d), behind=left-timeLeft;
   document.getElementById('lvTotal').textContent=lvHrs(total,unit);
   document.getElementById('lvLeft').textContent=lvHrs(left,unit);
   document.getElementById('lvTime').textContent=lvHrs(timeLeft);
@@ -344,12 +459,6 @@ function doLiveView(d){
   var rank=function(r){ var i=LV_STATUS_ORDER.indexOf(String(r.name||'').toLowerCase()); return i<0?99:i; };
   var so={total:so0.total, rows:(so0.rows||[]).map(function(r,i){ return {r:r,i:i}; })
     .sort(function(a,b){ return (rank(a.r)-rank(b.r))||(a.i-b.i); }).map(function(x){ return x.r; })};
-  if(person){
-    // Person slide: only their work items, same statuses / order / colours as the team slide.
-    var mine=function(t){ return normPersonName(t.assignee)===normPersonName(person); };
-    so.rows=so.rows.map(function(r){ var it=(r.items||[]).filter(mine); return {name:r.name, cat:r.cat, n:it.length, items:it}; });
-    so.total=so.rows.reduce(function(s,r){ return s+r.n; },0);
-  }
   var ex=0, cols=so.rows.map(function(row){ return LV_STATUS_COLORS[String(row.name||'').toLowerCase()]||LV_EXTRA_COLORS[ex++ % LV_EXTRA_COLORS.length]; });
   var open=function(i){ var row=so.rows[i]; if(row) nvDetail('Status · '+row.name, row.n+' work item(s)', nvTaskRows(row.items)); };
   window._lvOpen=open;
