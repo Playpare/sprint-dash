@@ -53,6 +53,8 @@
   #root.live-mode #page-live{height:100%;min-height:0}
   #root.live-mode #page-live .lv-wrap{height:100%;min-height:0}
   #root.live-mode #page-live .lv-card{min-height:0;overflow:hidden}
+  #root.live-mode #page-live .lv-quad{height:100%;min-height:0}
+  #root.live-mode #page-live .lv-quad .lv-chart{min-height:0}
 }
 
 /* Fill the whole screen height (page padding is 22px top + bottom). */
@@ -85,6 +87,12 @@
 #page-live .lv-cap{font-size:16px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;white-space:nowrap}
 #page-live .lv-cap:empty{display:none}
 #page-live .lv-title.is-person{font-size:clamp(34px,2.4vw,48px);overflow:hidden;text-overflow:ellipsis}
+/* Last Jira sync time (e.g. "3:00 AM"), pinned to the donut card's top-right
+   corner. Absolutely positioned, so the donut and legend keep their size and
+   place. */
+#page-live .lv-side{position:relative}
+#page-live .lv-sync{position:absolute;top:14px;right:16px;z-index:2;font-size:24px;font-weight:800;color:#fff;white-space:nowrap;pointer-events:none}
+#page-live .lv-sync:empty{display:none}
 /* Pure opacity fade (no movement — cheapest for TV browsers). The card boxes
    stay on screen; only what's inside them (header, stats, chart, donut, legend)
    fades out, is redrawn while invisible, then fades back in. The progress line
@@ -92,6 +100,37 @@
 #page-live .lv-wrap>.lv-card>:not(.lv-prog){transition:opacity .7s ease-in-out;will-change:opacity}
 #page-live .lv-wrap.lv-out>.lv-card>:not(.lv-prog){opacity:0}
 @media (prefers-reduced-motion: reduce){ #page-live .lv-wrap>.lv-card>:not(.lv-prog){transition:none} }
+
+/* Group slides: the screen splits into 4 equal quarters, one person each
+   (name · dates · countdown, 4 stat boxes, burndown — no donut). 10 s in, the
+   top pair slides down while the bottom pair slides up (.swapped). Contents
+   fade like the team view; the panel boxes stay. */
+#page-live .lv-quad{--lvq-gap:14px;display:none;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:var(--lvq-gap);min-height:calc(100vh - 44px)}
+#page-live.lv-quad-on .lv-wrap{display:none}
+#page-live.lv-quad-on .lv-quad{display:grid}
+/* One progress line along the top edge of the top cards (not part of the grid,
+   doesn't move with the swap, doesn't fade). */
+#page-live .lv-quad{position:relative}
+#page-live .lvq-prog{position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;overflow:hidden;pointer-events:none;z-index:3}
+#page-live .lvq-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00E5C3,#4D9FFF);opacity:.85}
+#page-live .lvq-panel{display:flex;flex-direction:column;position:relative;transition:transform .9s cubic-bezier(.65,0,.35,1);will-change:transform}
+/* Top row slides down, bottom row slides up (full-width cards too). */
+#page-live .lv-quad.swapped .lvq-panel[data-row="top"]{transform:translateY(calc(100% + var(--lvq-gap)))}
+#page-live .lv-quad.swapped .lvq-panel[data-row="bottom"]{transform:translateY(calc(-100% - var(--lvq-gap)))}
+#page-live .lv-quad.lvq-still .lvq-panel{transition:none}
+#page-live .lvq-in{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;transition:opacity .7s ease-in-out;will-change:opacity}
+#page-live .lv-quad.lv-out .lvq-in{opacity:0}
+#page-live .lvq-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:10px;min-width:0}
+#page-live .lvq-name{font-size:36px;font-weight:800;line-height:1.1;color:var(--text);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#page-live .lvq-upd{flex:none;margin-left:auto;font-size:25px;font-weight:700;color:var(--mut);white-space:nowrap}
+#page-live .lvq-upd:empty{display:none}
+#page-live .lv-quad .lv-stats{gap:10px;margin-bottom:12px}
+/* Individual cards: number on top, label underneath. */
+#page-live .lv-quad .lv-stat{padding:10px 14px;display:flex;flex-direction:column-reverse;justify-content:flex-end}
+#page-live .lv-quad .lv-stat .l{font-size:14px;margin-top:4px}
+#page-live .lv-quad .lv-stat .v{font-size:30px;margin-top:0}
+#page-live .lv-quad .lv-chart{flex:1 1 auto;height:0;min-height:120px;padding:6px 8px 2px}
+@media (prefers-reduced-motion: reduce){ #page-live .lvq-panel,#page-live .lvq-in{transition:none} }
 
 /* Stat boxes */
 #page-live .lv-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
@@ -168,6 +207,18 @@
   #page-live .lv-leg .n{font-size:1.7vw}
   #page-live .lv-leg .c{font-size:1.77vw}
   #page-live .lv-leg .p{font-size:1.72vw}
+  #page-live .lv-sync{top:.73vw;right:.83vw;font-size:1.25vw}
+  /* group slides (4 quarters), same vw scaling */
+  #root.live-mode #page-live .lv-quad{height:100%;min-height:0;--lvq-gap:.73vw}
+  #page-live .lvq-head{gap:.83vw;margin-bottom:.52vw}
+  #page-live .lvq-prog{height:2px}
+  #page-live .lvq-name{font-size:1.88vw}
+  #page-live .lvq-upd{font-size:1.3vw}
+  #page-live .lv-quad .lv-stats{gap:.52vw;margin-bottom:.63vw}
+  #page-live .lv-quad .lv-stat{padding:.52vw .73vw}
+  #page-live .lv-quad .lv-stat .l{font-size:.73vw;margin-top:.21vw}
+  #page-live .lv-quad .lv-stat .v{font-size:1.56vw;margin-top:0}
+  #page-live .lv-quad .lv-chart{min-height:0;padding:.31vw .42vw .1vw}
 }
 @media(max-width:720px){
   #page-live .lv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
