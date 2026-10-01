@@ -40,7 +40,7 @@ function lvHrs(v,unit){ return Math.round(v||0)+(unit||' hrs'); }
 
 // TV screens (same query as the TV block in live-view.css): canvas text on the
 // charts is scaled like the CSS, i.e. desktop px × (screen width ÷ 1920).
-var LV_TV_MQ='(min-width:861px) and (max-width:1200px) and (orientation:landscape) and (min-height:450px)';
+var LV_TV_MQ='(min-width:861px) and (max-width:1919px) and (orientation:landscape) and (min-height:450px)';
 function lvK(){ return (window.matchMedia && window.matchMedia(LV_TV_MQ).matches) ? window.innerWidth/1920 : 1; }
 
 // Working days left (today included while it is a sprint day) × Σ daily hours of the sprint's people.
@@ -306,7 +306,7 @@ function doLiveView(d){
   titleEl.textContent=person||sp.id||cur;
   titleEl.classList.toggle('is-person', !!person);
   var capEl=document.getElementById('lvCap');
-  if(capEl) capEl.textContent=person ? (sp.id||cur)+' · Individual '+_lvShow.idx+' / '+people.length : '';
+  if(capEl) capEl.textContent=person ? (sp.id||cur) : '';
   document.getElementById('lvStart').textContent=lvMonDay(sp.start);
   document.getElementById('lvEnd').textContent=lvMonDay(sp.end);
   lvCountdown(d);
