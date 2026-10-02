@@ -253,11 +253,12 @@ function lvSizeCenter(ch){
 // Team view for 8 min, then the people with an individual burndown (same people
 // as the MMS Team page's individual chart) in groups of 4: the screen splits
 // into 4 equal quarters, one person each (name, dates, countdown, 4 stat boxes,
-// burndown — no donut). After 10 s the top pair slides down while the bottom
-// pair slides up; after 20 s the next 4 come in. After the last group it goes
-// back to the team view. The position survives the quiet auto-refresh /
-// midnight re-render; leaving Live View resets it.
-var LV_MAIN_MS=8*60e3, LV_GROUP_MS=20e3, LV_SWAP_MS=10e3;
+// burndown — no donut). Each group shows for 1 min: after 30 s the top row
+// slides down while the bottom row slides up (a 3 s slide + fade that is NOT
+// counted in the minute, so both halves get a full 30 s), then the next group
+// comes in. After the last group it goes back to the team view. The position
+// survives the quiet auto-refresh / midnight re-render; leaving Live View resets it.
+var LV_MAIN_MS=8*60e3, LV_GROUP_MS=60e3, LV_SWAP_MS=30e3, LV_SWAP_ANIM_MS=3000;   // keep LV_SWAP_ANIM_MS = .lvq-panel transition in live-view.css
 var _lvShow={idx:0, start:0, timer:null, swapped:false};   // idx 0 = team, 1..n = groups[idx-1]
 function lvPeople(d){
   var B=d && d.burn;
@@ -269,7 +270,13 @@ function lvGroups(d){
   for(var i=0;i<p.length;i+=4) g.push(p.slice(i,i+4));
   return g;
 }
-function lvSlideMs(){ return _lvShow.idx ? LV_GROUP_MS : LV_MAIN_MS; }
+// Group slide = 1 min of viewing + the swap animation (not counted). A group
+// of one person doesn't swap, so it stays exactly 1 min.
+function lvSlideMs(){
+  if(!_lvShow.idx) return LV_MAIN_MS;
+  var g=lvGroups(window._sprintData)[_lvShow.idx-1];
+  return LV_GROUP_MS + (g && g.length>1 ? LV_SWAP_ANIM_MS : 0);
+}
 // Time the latest Jira sync finished in Apps Script (Sync Log, sent as
 // lastSync), top-right of the donut card, e.g. "3:00 AM" (PKT, 12-hour). It
 // moves on with every completed sync (≈ every 10 min), changes or not, as soon
@@ -294,15 +301,20 @@ function lvShowTick(){
     clearInterval(_lvShow.timer); _lvShow.timer=null; _lvShow.idx=0; return;
   }
   var el=Date.now()-_lvShow.start;
-  // Group slide, 10 s in: top pair slides down, bottom pair slides up (CSS).
+  // Group slide, 30 s in: calm slide + fade — the rows glide past each other
+  // (3 s) while their contents dim to ~35% and back (CSS .lvq-moving).
   if(_lvShow.idx && !_lvShow.swapped && el>=LV_SWAP_MS){
     _lvShow.swapped=true;
-    var q=document.getElementById('lvQuad'); if(q && !q.classList.contains('lvq-solo')) q.classList.add('swapped');
+    var q=document.getElementById('lvQuad');
+    if(q && !q.classList.contains('lvq-solo')){
+      q.classList.add('lvq-moving','swapped');
+      setTimeout(function(){ q.classList.remove('lvq-moving'); }, LV_SWAP_ANIM_MS+50);
+    }
   }
   if(el < lvSlideMs()) return;
   var d=window._sprintData, n=lvGroups(d).length;
   _lvShow.idx = _lvShow.idx>=n ? 0 : _lvShow.idx+1;
-  _lvShow.start=Date.now(); _lvShow.swapped=false;
+  _lvShow.start=Date.now()+750; _lvShow.swapped=false;   // the 0.75 s fade-out isn't counted in the slide's time
   if(!d) return;
   var boxes=document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad');
   if(!boxes.length){ doLiveView(d); return; }
