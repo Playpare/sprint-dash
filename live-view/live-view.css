@@ -113,13 +113,18 @@
 #page-live .lv-quad{position:relative}
 #page-live .lvq-prog{position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;overflow:hidden;pointer-events:none;z-index:3}
 #page-live .lvq-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00E5C3,#4D9FFF);opacity:.85}
-#page-live .lvq-panel{display:flex;flex-direction:column;position:relative;transition:transform .9s cubic-bezier(.65,0,.35,1);will-change:transform}
+#page-live .lvq-panel{display:flex;flex-direction:column;position:relative;transition:transform 3s cubic-bezier(.4,0,.2,1);will-change:transform}
 /* Top row slides down, bottom row slides up (full-width cards too). */
 #page-live .lv-quad.swapped .lvq-panel[data-row="top"]{transform:translateY(calc(100% + var(--lvq-gap)))}
 #page-live .lv-quad.swapped .lvq-panel[data-row="bottom"]{transform:translateY(calc(-100% - var(--lvq-gap)))}
 #page-live .lv-quad.lvq-still .lvq-panel{transition:none}
 #page-live .lvq-in{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;transition:opacity .7s ease-in-out;will-change:opacity}
 #page-live .lv-quad.lv-out .lvq-in{opacity:0}
+/* Row swap at 10 s — a calm slide + fade: the cards glide to the other row over
+   3 s (soft start and stop) while their contents gently dim to ~35% and come
+   back, so the move is visible but doesn't pull attention. */
+@keyframes lvqDim{0%{opacity:1}50%{opacity:.35}100%{opacity:1}}
+#page-live .lv-quad.lvq-moving .lvq-in{animation:lvqDim 3s ease-in-out}
 #page-live .lvq-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:10px;min-width:0}
 #page-live .lvq-name{font-size:36px;font-weight:800;line-height:1.1;color:var(--text);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 #page-live .lvq-upd{flex:none;margin-left:auto;font-size:25px;font-weight:700;color:var(--mut);white-space:nowrap}
@@ -127,18 +132,22 @@
 #page-live .lv-quad .lv-stats{gap:10px;margin-bottom:12px}
 /* Individual cards: number on top, label underneath. */
 #page-live .lv-quad .lv-stat{padding:10px 14px;display:flex;flex-direction:column-reverse;justify-content:flex-end}
-#page-live .lv-quad .lv-stat .l{font-size:14px;margin-top:4px}
+#page-live .lv-quad .lv-stat .l{font-size:16px;margin-top:4px;font-weight:800;color:#dbe1f5;letter-spacing:.02em}
 #page-live .lv-quad .lv-stat .v{font-size:30px;margin-top:0}
 #page-live .lv-quad .lv-chart{flex:1 1 auto;height:0;min-height:120px;padding:6px 8px 2px}
-@media (prefers-reduced-motion: reduce){ #page-live .lvq-panel,#page-live .lvq-in{transition:none} }
+@media (prefers-reduced-motion: reduce){ #page-live .lvq-panel,#page-live .lvq-in{transition:none;animation:none} }
 
 /* Stat boxes */
 #page-live .lv-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
 #page-live .lv-stat{background:var(--sur2);border:1px solid var(--bor);border-radius:10px;padding:14px 18px}
 #page-live .lv-stat .l{font-size:15px;font-weight:600;color:var(--mut);text-transform:uppercase;line-height:1.3}
 #page-live .lv-stat .v{font-family:var(--lv-font);font-size:34px;font-weight:800;line-height:1.15;color:var(--text);margin-top:6px;white-space:nowrap}
+/* Team slide: bigger cards, bolder / brighter labels and larger hours. */
+#page-live .lv-wrap .lv-stat{padding:18px 22px}
+#page-live .lv-wrap .lv-stat .l{font-size:17px;font-weight:800;color:#dbe1f5;letter-spacing:.02em}
+#page-live .lv-wrap .lv-stat .v{font-size:44px;margin-top:8px}
 #page-live .lv-stat .v.bad{color:var(--red)}
-#page-live .lv-stat .v.good{color:var(--grn)}
+#page-live .lv-stat .v.good{color:#39dc91}   /* "Hours Ahead": brighter green so it reads clearly */
 
 /* Burndown */
 #page-live .lv-chart{position:relative;flex:1 1 auto;min-height:380px;height:0;background:#000;border:1px solid var(--bor);border-radius:10px;padding:8px 10px 4px}
@@ -198,6 +207,9 @@
   #page-live .lv-stat{padding:.73vw .94vw;border-radius:.52vw}
   #page-live .lv-stat .l{font-size:.78vw}
   #page-live .lv-stat .v{font-size:1.77vw;margin-top:.31vw}
+  #page-live .lv-wrap .lv-stat{padding:.94vw 1.15vw}
+  #page-live .lv-wrap .lv-stat .l{font-size:.89vw}
+  #page-live .lv-wrap .lv-stat .v{font-size:2.29vw;margin-top:.42vw}
   #page-live .lv-chart{flex:1 1 auto;height:0;min-height:0;border-radius:.52vw;padding:.42vw .52vw .21vw}
   #page-live .lv-side{gap:.52vw;padding-top:.73vw;padding-bottom:.73vw}
   #page-live .lv-donut{max-width:min(100%,50vh)}
@@ -216,12 +228,14 @@
   #page-live .lvq-upd{font-size:1.3vw}
   #page-live .lv-quad .lv-stats{gap:.52vw;margin-bottom:.63vw}
   #page-live .lv-quad .lv-stat{padding:.52vw .73vw}
-  #page-live .lv-quad .lv-stat .l{font-size:.73vw;margin-top:.21vw}
+  #page-live .lv-quad .lv-stat .l{font-size:.83vw;margin-top:.21vw}
   #page-live .lv-quad .lv-stat .v{font-size:1.56vw;margin-top:0}
   #page-live .lv-quad .lv-chart{min-height:0;padding:.31vw .42vw .1vw}
 }
 @media(max-width:720px){
   #page-live .lv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #page-live .lv-wrap .lv-stat .v{font-size:30px}
+  #page-live .lv-wrap .lv-stat .l{font-size:14px}
   #page-live .lv-title,#page-live .lv-count .v{font-size:26px}
   #page-live .lv-head{grid-template-columns:1fr;justify-items:center;text-align:center}
   #page-live .lv-title,#page-live .lv-count,#page-live .lv-tw{justify-self:center;text-align:center}
