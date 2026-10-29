@@ -5,8 +5,9 @@
      Work left    = remaining estimate now (Jira burndown)
      Time left    = working days left × daily hours of the people in the sprint
                     (Team Capacity, 6h when someone isn't listed)
-     Hours behind = work left − time left
-   Without Jira burndown data the sprint estimate / logged hours are used. */
+     Hours behind = work left − guideline now (the chart's "BEHIND IDEAL" value)
+   Without Jira burndown data the sprint estimate / logged hours are used, with
+   a straight guideline over the sprint's working days. */
 var _lvTimer=null;
 var LV_STATUS_COLORS={'done':'#3ecf8e','to do':'#4c8df6','in progress':'#fdd33c','in review':'#e5484d','paused':'#9d6bf7'};
 // Donut + legend order: Done, To Do, In Progress, In Review, Paused, then any other status.
@@ -96,7 +97,8 @@ function lvLabelRoom(ch, last, B, gap, unit, k){
   return Math.max(6, Math.ceil(r)+8);
 }
 
-// Jira-style burndown in the Live View look. Returns the ideal remaining now.
+// Jira-style burndown in the Live View look. Returns the start / latest remaining
+// and gap = latest remaining − guideline at that moment (> 0 = behind ideal).
 // opt (quarter panels): {canvas, key, scale} — draw into another canvas, keep
 // the chart under CH[key], text × scale, no hover pop-up.
 function lvBurn(B, dayNo, opt){
@@ -180,7 +182,7 @@ function lvBurn(B, dayNo, opt){
     CH.lv._lvData={pts:pts, idealAt:idealAt, unit:unit, start:B.start, end:B.end};
     lvBindBurnHover(document.getElementById(cid));
   }
-  return {start:startVal, left:last[1], unit:unit};
+  return {start:startVal, left:last[1], gap:gap, unit:unit};
 }
 
 // Burndown pop-up: follows the cursor across the whole chart and shows, for the
@@ -253,11 +255,12 @@ function lvSizeCenter(ch){
 // Team view for 8 min, then the people with an individual burndown (same people
 // as the MMS Team page's individual chart) in groups of 4: the screen splits
 // into 4 equal quarters, one person each (name, dates, countdown, 4 stat boxes,
-// burndown — no donut). After 10 s the top pair slides down while the bottom
-// pair slides up; after 20 s the next 4 come in. After the last group it goes
-// back to the team view. The position survives the quiet auto-refresh /
-// midnight re-render; leaving Live View resets it.
-var LV_MAIN_MS=8*60e3, LV_GROUP_MS=20e3, LV_SWAP_MS=10e3;
+// burndown — no donut). Each group shows for 1 min: after 30 s the top row
+// slides down while the bottom row slides up (a 3 s slide + fade that is NOT
+// counted in the minute, so both halves get a full 30 s), then the next group
+// comes in. After the last group it goes back to the team view. The position
+// survives the quiet auto-refresh / midnight re-render; leaving Live View resets it.
+var LV_MAIN_MS=8*60e3, LV_GROUP_MS=60e3, LV_SWAP_MS=30e3, LV_SWAP_ANIM_MS=3000;   // keep LV_SWAP_ANIM_MS = .lvq-panel transition in live-view.css
 var _lvShow={idx:0, start:0, timer:null, swapped:false};   // idx 0 = team, 1..n = groups[idx-1]
 function lvPeople(d){
   var B=d && d.burn;
@@ -269,7 +272,13 @@ function lvGroups(d){
   for(var i=0;i<p.length;i+=4) g.push(p.slice(i,i+4));
   return g;
 }
-function lvSlideMs(){ return _lvShow.idx ? LV_GROUP_MS : LV_MAIN_MS; }
+// Group slide = 1 min of viewing + the swap animation (not counted). A group
+// of one person doesn't swap, so it stays exactly 1 min.
+function lvSlideMs(){
+  if(!_lvShow.idx) return LV_MAIN_MS;
+  var g=lvGroups(window._sprintData)[_lvShow.idx-1];
+  return LV_GROUP_MS + (g && g.length>1 ? LV_SWAP_ANIM_MS : 0);
+}
 // Time the latest Jira sync finished in Apps Script (Sync Log, sent as
 // lastSync), top-right of the donut card, e.g. "3:00 AM" (PKT, 12-hour). It
 // moves on with every completed sync (≈ every 10 min), changes or not, as soon
@@ -294,15 +303,20 @@ function lvShowTick(){
     clearInterval(_lvShow.timer); _lvShow.timer=null; _lvShow.idx=0; return;
   }
   var el=Date.now()-_lvShow.start;
-  // Group slide, 10 s in: top pair slides down, bottom pair slides up (CSS).
+  // Group slide, 30 s in: calm slide + fade — the rows glide past each other
+  // (3 s) while their contents dim to ~35% and back (CSS .lvq-moving).
   if(_lvShow.idx && !_lvShow.swapped && el>=LV_SWAP_MS){
     _lvShow.swapped=true;
-    var q=document.getElementById('lvQuad'); if(q && !q.classList.contains('lvq-solo')) q.classList.add('swapped');
+    var q=document.getElementById('lvQuad');
+    if(q && !q.classList.contains('lvq-solo')){
+      q.classList.add('lvq-moving','swapped');
+      setTimeout(function(){ q.classList.remove('lvq-moving'); }, LV_SWAP_ANIM_MS+50);
+    }
   }
   if(el < lvSlideMs()) return;
   var d=window._sprintData, n=lvGroups(d).length;
   _lvShow.idx = _lvShow.idx>=n ? 0 : _lvShow.idx+1;
-  _lvShow.start=Date.now(); _lvShow.swapped=false;
+  _lvShow.start=Date.now()+750; _lvShow.swapped=false;   // the 0.75 s fade-out isn't counted in the slide's time
   if(!d) return;
   var boxes=document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad');
   if(!boxes.length){ doLiveView(d); return; }
@@ -380,11 +394,11 @@ function lvRenderQuad(d, names, dayNo){
   names.forEach(function(n,i){
     var panel=q.querySelector('.lvq-panel[data-slot="'+i+'"]'); if(!panel) return;
     var r=lvBurn(Object.assign({}, B, {p:B.people[n]}), dayNo, {canvas:'lvqC'+i, key:'lvq'+i, scale:.85});
-    var timeLeft=daysLeft*lvPersonHours(d, n), behind=r.left-timeLeft;
+    var timeLeft=daysLeft*lvPersonHours(d, n), behind=r.gap>0.5;   // same rule as the chart's label
     var v=panel.querySelectorAll('.lv-stat .v');
     v[0].textContent=lvHrs(r.start,unit); v[1].textContent=lvHrs(r.left,unit); v[2].textContent=lvHrs(timeLeft);
-    panel.querySelector('[data-k="b"]').textContent=behind>0?'Hours Behind':'Hours Ahead';
-    v[3].textContent=lvHrs(Math.abs(behind)); v[3].className='v '+(behind>0?'bad':'good');
+    panel.querySelector('[data-k="b"]').textContent=behind?'Hours Behind':'Hours Ahead';
+    v[3].textContent=lvHrs(Math.abs(r.gap),unit); v[3].className='v '+(behind?'bad':'good');
   });
 }
 // Thin line at the top that fills up until the next slide (team card, or the
@@ -434,24 +448,26 @@ function doLiveView(d){
   lvCountdown(d);
 
   // Burndown + totals
-  var B=d.burn, wrap=document.getElementById('lvChartWrap'), total, left, unit=' hrs';
+  var B=d.burn, wrap=document.getElementById('lvChartWrap'), total, left, gap, unit=' hrs';
   if(B && B.p && B.p.length){
     if(!wrap.querySelector('canvas')) wrap.innerHTML='<canvas id="lvC"></canvas>';
     var r=lvBurn(B, dayNo);
-    total=r.start; left=r.left; if(B.unit!=='h') unit=' pts';
+    total=r.start; left=r.left; gap=r.gap; if(B.unit!=='h') unit=' pts';
   } else {
     if(CH.lv){ CH.lv.destroy(); CH.lv=null; }
     wrap.innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
     total=d.totEst||0; left=Math.max(0,(d.totEst||0)-(d.totLog||0));
+    var dTot=d.dTot||0;
+    gap=left-(dTot ? total*(1-Math.min(dTot,lvDaysDone(d))/dTot) : total);
   }
-  var timeLeft=lvTimeLeft(d), behind=left-timeLeft;
+  var timeLeft=lvTimeLeft(d), behind=gap>0.5;   // same rule as the chart's "BEHIND IDEAL" label
   document.getElementById('lvTotal').textContent=lvHrs(total,unit);
   document.getElementById('lvLeft').textContent=lvHrs(left,unit);
   document.getElementById('lvTime').textContent=lvHrs(timeLeft);
   var bEl=document.getElementById('lvBehind');
-  document.getElementById('lvBehindL').textContent=behind>0?'Hours Behind':'Hours Ahead';
-  bEl.textContent=lvHrs(Math.abs(behind));
-  bEl.className='v '+(behind>0?'bad':'good');
+  document.getElementById('lvBehindL').textContent=behind?'Hours Behind':'Hours Ahead';
+  bEl.textContent=lvHrs(Math.abs(gap),unit);
+  bEl.className='v '+(behind?'bad':'good');
 
   // Status donut — every work item in the sprint by Jira status (same data as the Overview).
   var m=(window._bpMode==='without' && d.exBP) ? d.exBP : d;
