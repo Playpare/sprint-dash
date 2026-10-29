@@ -6,7 +6,7 @@
      Time left    = working days left × daily hours of the people in the sprint
                     (Team Capacity, 6h when someone isn't listed)
      Hours behind = work left − guideline now (the chart's "BEHIND IDEAL" value)
-   Without Jira burndown data the sprint estimate / logged hours are used, with
+   Without a Jira burndown in hours the sprint estimate / logged hours are used, with
    a straight guideline over the sprint's working days. */
 var _lvTimer=null;
 var LV_STATUS_COLORS={'done':'#3ecf8e','to do':'#4c8df6','in progress':'#fdd33c','in review':'#e5484d','paused':'#9d6bf7'};
@@ -262,8 +262,12 @@ function lvSizeCenter(ch){
 // survives the quiet auto-refresh / midnight re-render; leaving Live View resets it.
 var LV_MAIN_MS=8*60e3, LV_GROUP_MS=60e3, LV_SWAP_MS=30e3, LV_SWAP_ANIM_MS=3000;   // keep LV_SWAP_ANIM_MS = .lvq-panel transition in live-view.css
 var _lvShow={idx:0, start:0, timer:null, swapped:false};   // idx 0 = team, 1..n = groups[idx-1]
+// The Jira burndown only when it is in hours. A board whose burndown comes in
+// points can't be compared with the hours cards, so Live View shows no chart
+// there and uses the sprint estimate / logged hours instead.
+function lvBurnHours(d){ var B=d && d.burn; return B && B.unit==='h' ? B : null; }
 function lvPeople(d){
-  var B=d && d.burn;
+  var B=lvBurnHours(d);
   if(!B || !B.p || !B.p.length || !B.people) return [];
   return Object.keys(B.people).filter(function(n){ return (B.people[n]||[]).length; }).sort();
 }
@@ -362,7 +366,7 @@ function lvQuadDestroy(){ for(var i=0;i<4;i++){ if(CH['lvq'+i]){ CH['lvq'+i].des
 function lvRenderQuad(d, names, dayNo){
   var q=document.getElementById('lvQuad'); if(!q) return;
   lvQuadDestroy();
-  var sp=d.spInfo||{}, B=d.burn, unit=B.unit==='h'?' hrs':' pts';
+  var sp=d.spInfo||{}, B=lvBurnHours(d), unit=B.unit==='h'?' hrs':' pts';
   var daysLeft=Math.max(0,(d.dTot||0)-lvDaysDone(d));
   var stat=function(l,id){ return '<div class="lv-stat"><div class="l"'+(id?' data-k="'+id+'"':'')+'>'+l+'</div><div class="v"></div></div>'; };
   // Layout by group size: [grid-column, grid-row, row] per person.
@@ -448,14 +452,14 @@ function doLiveView(d){
   lvCountdown(d);
 
   // Burndown + totals
-  var B=d.burn, wrap=document.getElementById('lvChartWrap'), total, left, gap, unit=' hrs';
+  var B=lvBurnHours(d), wrap=document.getElementById('lvChartWrap'), total, left, gap, unit=' hrs';
   if(B && B.p && B.p.length){
     if(!wrap.querySelector('canvas')) wrap.innerHTML='<canvas id="lvC"></canvas>';
     var r=lvBurn(B, dayNo);
     total=r.start; left=r.left; gap=r.gap; if(B.unit!=='h') unit=' pts';
   } else {
     if(CH.lv){ CH.lv.destroy(); CH.lv=null; }
-    wrap.innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
+    wrap.innerHTML='<div class="nv-dt-empty">Jira burndown in hours is not available for this sprint.</div>';
     total=d.totEst||0; left=Math.max(0,(d.totEst||0)-(d.totLog||0));
     var dTot=d.dTot||0;
     gap=left-(dTot ? total*(1-Math.min(dTot,lvDaysDone(d))/dTot) : total);
