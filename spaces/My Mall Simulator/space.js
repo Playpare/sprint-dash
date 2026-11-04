@@ -682,7 +682,7 @@ function doOverview(d){
   if(cp){ cp.className='nv-pill '+(so.pct>=90?'good':(so.pct>=65?'warn':'bad')); cp.textContent=so.pct+'% done'; }
 
   // Status grid
-  var rem=Math.max(0,(d.dTot||0)-(d.dDone||0));
+  var rem=nvSprintCountdownDays(d);
   // "Original Est." = the workload actually PLANNED at sprint start. Unplanned
   // work is reported separately in "Extra Hours", so it's subtracted here
   // instead of being buried inside the estimate. Total Logged and Efficiency
@@ -997,7 +997,7 @@ function doSprintProgress(d){
   // Mode-aware completion figure — drives the On/Off Track badge.
   var m = (nvBPWithout() && d.exBP) ? d.exBP : d;
   var pct=d.dTot>0?Math.min(100,Math.round(d.dDone/d.dTot*100)):0;
-  var rem=Math.max(0,d.dTot-d.dDone);
+  var rem=nvSprintCountdownDays(d);
   var timePct=d.dTot>0?(d.dDone/d.dTot*100):0;
   // Badge 1: days remaining
   var b1=document.getElementById('spBadge');
@@ -1212,6 +1212,23 @@ async function deleteSprintGoal(sid){
   }catch(e){}
   renderSprintGoal(sid,document.getElementById('sprintGoalBox'));
 }
+function nvCountdownWorkingDays(end, now){
+  if(!end) return 0;
+  var fullDays=Math.floor(Math.max(0,end.getTime()-now)/864e5), count=0;
+  var pkt=new Date(now+5*36e5);
+  var day=new Date(Date.UTC(pkt.getUTCFullYear(),pkt.getUTCMonth(),pkt.getUTCDate()));
+  for(var i=1;i<=fullDays;i++){
+    var next=new Date(day); next.setUTCDate(day.getUTCDate()+i);
+    var w=next.getUTCDay();
+    if(w!==0&&w!==6) count++;
+  }
+  return count;
+}
+function nvSprintCountdownDays(d){
+  var sp=d.spInfo||{}, end=sp.endIso?new Date(sp.endIso):null;
+  if(!end||isNaN(end)){ var e=pd(sp.end); if(e) end=new Date(e.getFullYear(),e.getMonth(),e.getDate(),23,59,59); }
+  return nvCountdownWorkingDays(end,nowMs());
+}
 function doCompletionCountdown(d){
   // Countdown to the Jira sprint end (exact date + time from Jira)
   if(_cdTimer){ clearInterval(_cdTimer); _cdTimer=null; }
@@ -1222,7 +1239,7 @@ function doCompletionCountdown(d){
   function tick(){
     if(!document.body.contains(cd)){ clearInterval(_cdTimer); _cdTimer=null; return; }
     var ms=end?Math.max(0,end.getTime()-nowMs()):0;
-    var dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4), ss=Math.floor(ms%6e4/1e3);
+    var dd=nvCountdownWorkingDays(end,nowMs()), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4), ss=Math.floor(ms%6e4/1e3);
     cd.className='nv-cd'+(ms<=0?' ended':'');
     cd.innerHTML=[[dd,'Days'],[hh,'Hrs'],[mm,'Min'],[ss,'Sec']].map(function(x){ return '<div class="nv-cd-b"><div class="v">'+String(x[0]).padStart(2,'0')+'</div><div class="l">'+x[1]+'</div></div>'; }).join('');
     if(cs){
