@@ -177,6 +177,17 @@
 #page-live .lv-leg .c{font-family:var(--lv-font);font-size:34px;font-weight:800;color:var(--text);text-align:right}
 #page-live .lv-leg .p{font-family:var(--lv-font);font-size:33px;font-weight:800;text-align:right}
 
+/* MSS3D has more Jira statuses than MMS. Compact only its right card so all
+   donut legends remain visible within the fixed-height Live View. */
+#page-live.mss3d-live .lv-donut{max-width:min(100%,40vh);transform:translateY(8px) scale(1.04)}
+#page-live.mss3d-live .lv-legend{gap:2px;padding:8px 12px 0}
+#page-live.mss3d-live .lv-leg{grid-template-columns:28px minmax(0,1fr) 64px 64px;gap:10px;padding:3px 5px}
+#page-live.mss3d-live .lv-leg .sq{width:26px;height:26px;border-radius:6px}
+#page-live.mss3d-live .lv-leg .n{font-size:clamp(20px,1.35vw,27px)}
+#page-live.mss3d-live .lv-leg .c,#page-live.mss3d-live .lv-leg .p{font-size:27px}
+#page-live.mss3d-live .lv-leg{position:relative}
+#page-live.mss3d-live .lv-leg .c{position:absolute;left:59%;transform:translateX(-50%);text-align:center}
+
 @media(max-width:1200px){
   #page-live .lv-wrap{grid-template-columns:1fr;min-height:0}
   #page-live .lv-chart{flex:none;height:470px}
