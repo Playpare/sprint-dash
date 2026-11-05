@@ -35,18 +35,18 @@ function markActiveSpace(){
     el.classList.toggle('on', el.getAttribute('data-space') === window._space);
   });
 }
-function selectSpace(key){
+function selectSpace(key, pageAfterLoad){
   if(SPACE_KEYS.indexOf(key)===-1) return;
   var changed = key !== window._space;
   window._space = key;
   try { localStorage.setItem('dashSpace', key); } catch(e){}
-  currentPage='overview';
+  currentPage=pageAfterLoad||'overview';
   markActiveSpace();
   syncSbTabMode();
   document.querySelectorAll('.sb-item[data-page]').forEach(function(el){ el.classList.remove('on'); });
   document.querySelectorAll('.nv-tab').forEach(function(el){ el.classList.toggle('on',el.dataset.page==='overview'); });
   if(window.innerWidth <= 860) document.getElementById('sidebar').classList.remove('open');
-  if(!changed){ switchPage('overview'); return; }
+  if(!changed){ switchPage(currentPage); return; }
   // Sprint ids differ per space — drop the current selection and reload.
   cur=null; curTeam='All'; raw=null; window._sprintData=null;
   // Clear what belonged to the previous space, so a space with no sprints
@@ -432,7 +432,8 @@ function switchPage(page){
     el.classList.toggle('on', workspacePage && el.getAttribute('data-space')===window._space);
   });
   document.querySelectorAll('.sb-item[data-page]').forEach(function(el){
-    el.classList.toggle('on', el.dataset.page === page);
+    var liveSpace=el.getAttribute('data-live-space');
+    el.classList.toggle('on', el.dataset.page === page && (!liveSpace || liveSpace===window._space));
   });
   // Reflect active state on the top tab-row (Overview / Team / Retrospective)
   document.querySelectorAll('.nv-tab').forEach(function(el){
@@ -441,6 +442,7 @@ function switchPage(page){
   positionSidebarIndicator();
   // Update title (discovery spaces use their own page names)
   var PG = (isDisc() && DISC_PAGES[page]) || PAGES[page];
+  if(page==='live') PG={title:(window._space==='MSSD'?'MSS3D':'MMS')+' Live View',sub:PG.sub};
   document.getElementById('pageTitle').textContent = PG.title;
   document.getElementById('pageSub').textContent = PG.sub;
 
@@ -1327,7 +1329,9 @@ function setupSidebar(){
   document.querySelectorAll('.sb-item[data-page]').forEach(function(el){
     el.addEventListener('click', function(){
       if(this.getAttribute('data-hidden') === '1') return;
-      switchPage(this.dataset.page);
+      var liveSpace=this.getAttribute('data-live-space');
+      if(liveSpace) selectSpace(liveSpace,'live');
+      else switchPage(this.dataset.page);
     });
   });
   // Jira spaces — same page, different data.
@@ -1487,7 +1491,10 @@ function setDiscMode(on){
     if(!PAGES[currentPage] || currentPage==='ideas') currentPage='overview';
     document.getElementById('pageTitle').textContent=PAGES[currentPage].title;
     document.getElementById('pageSub').textContent=PAGES[currentPage].sub;
-    document.querySelectorAll('.sb-item[data-page]').forEach(function(el){ el.classList.toggle('on', el.dataset.page===currentPage); });
+    document.querySelectorAll('.sb-item[data-page]').forEach(function(el){
+      var liveSpace=el.getAttribute('data-live-space');
+      el.classList.toggle('on',el.dataset.page===currentPage&&(!liveSpace||liveSpace===window._space));
+    });
     document.querySelectorAll('.nv-tab').forEach(function(el){ el.classList.toggle('on', el.dataset.page===currentPage); });
   }
 }

@@ -12,6 +12,13 @@ var _lvTimer=null;
 var LV_STATUS_COLORS={'done':'#3ecf8e','to do':'#4c8df6','in progress':'#fdd33c','in review':'#e5484d','paused':'#9d6bf7'};
 // Donut + legend order: Done, To Do, In Progress, In Review, Paused, then any other status.
 var LV_STATUS_ORDER=['done','to do','in progress','in review','paused'];
+// My Supermarket Simulator - Delivery: Jira's requested nine-status legend.
+var LV_MSSD_STATUS_ORDER=['to do','done','in progress','in review','dev done','paused','build awaiting','cancelled','reopened'];
+var LV_MSSD_STATUS_COLORS={
+  'to do':'#4c8df6','done':'#f05252','in progress':'#bf9100','in review':'#22a06b',
+  'dev done':'#2f9ab8','paused':'#9d6bf7','build awaiting':'#858890',
+  'cancelled':'#4c8df6','reopened':'#f05252'
+};
 // Any other Jira status (not one of the five above) gets the next colour here.
 var LV_EXTRA_COLORS=['#22c4c4','#5b6ef5','#ff8fab','#0aaa62','#ffc56b','#d98a0b'];
 
@@ -323,12 +330,13 @@ function lvSyncTime(){
   // A newly received sync gets a full six-minute display window. Persist its
   // deadline so reloading the dashboard does not restart that window.
   try {
-    var saved=JSON.parse(localStorage.getItem('lv_sync_countdown')||'null');
+    var syncKey='lv_sync_countdown:'+(window._space||'MMS');
+    var saved=JSON.parse(localStorage.getItem(syncKey)||'null');
     if(saved && saved.stamp===stamp && isFinite(saved.deadline)){
       deadline=Number(saved.deadline);
     } else if(d){
       deadline=saved && saved.stamp ? nowMs()+step : d.getTime()+step;
-      localStorage.setItem('lv_sync_countdown',JSON.stringify({stamp:stamp,deadline:deadline}));
+      localStorage.setItem(syncKey,JSON.stringify({stamp:stamp,deadline:deadline}));
     }
   } catch(e){}
   if(_lvSyncTimer){ clearInterval(_lvSyncTimer); _lvSyncTimer=null; }
@@ -477,6 +485,7 @@ function doLiveView(d){
   lvWhenFontReady(d);
   var page=document.getElementById('page-live');
   if(!page) return;
+  page.classList.toggle('mss3d-live',window._space==='MSSD');
   if(!_lvShow.timer){ _lvShow.idx=0; _lvShow.start=Date.now(); _lvShow.swapped=false; _lvShow.timer=setInterval(lvShowTick,1000); }
   var groups=lvGroups(d);
   if(_lvShow.idx>groups.length) _lvShow.idx=0;
@@ -496,7 +505,9 @@ function doLiveView(d){
   lvSlideProgress();
   lvSyncTime();
   var titleEl=document.getElementById('lvTitle');
-  titleEl.textContent=sp.id||cur;
+  var liveTitle=sp.id||cur;
+  if(window._space==='MSSD') liveTitle=String(liveTitle||'').replace(/^MSSD\s+/i,'');
+  titleEl.textContent=liveTitle;
   titleEl.classList.remove('is-person');
   var capEl=document.getElementById('lvCap');
   if(capEl) capEl.textContent='';
@@ -529,10 +540,12 @@ function doLiveView(d){
   // Status donut — every work item in the sprint by Jira status (same data as the Overview).
   var m=(window._bpMode==='without' && d.exBP) ? d.exBP : d;
   var so0=m.statusOv||d.statusOv||{rows:[],total:0};
-  var rank=function(r){ var i=LV_STATUS_ORDER.indexOf(String(r.name||'').toLowerCase()); return i<0?99:i; };
+  var statusOrder=window._space==='MSSD'?LV_MSSD_STATUS_ORDER:LV_STATUS_ORDER;
+  var statusColors=window._space==='MSSD'?LV_MSSD_STATUS_COLORS:LV_STATUS_COLORS;
+  var rank=function(r){ var i=statusOrder.indexOf(String(r.name||'').toLowerCase()); return i<0?99:i; };
   var so={total:so0.total, rows:(so0.rows||[]).map(function(r,i){ return {r:r,i:i}; })
     .sort(function(a,b){ return (rank(a.r)-rank(b.r))||(a.i-b.i); }).map(function(x){ return x.r; })};
-  var ex=0, cols=so.rows.map(function(row){ return LV_STATUS_COLORS[String(row.name||'').toLowerCase()]||LV_EXTRA_COLORS[ex++ % LV_EXTRA_COLORS.length]; });
+  var ex=0, cols=so.rows.map(function(row){ return statusColors[String(row.name||'').toLowerCase()]||LV_EXTRA_COLORS[ex++ % LV_EXTRA_COLORS.length]; });
   var open=function(i){ var row=so.rows[i]; if(row) nvDetail('Status · '+row.name, row.n+' work item(s)', nvTaskRows(row.items)); };
   window._lvOpen=open;
   document.getElementById('lvDTotal').textContent=so.total||0;
