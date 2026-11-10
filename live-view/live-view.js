@@ -75,6 +75,17 @@ function lvTimeLeft(d){
   return daysLeft*perDay;
 }
 
+// Wall-clock hours remaining, using the same sprint end timestamp as the countdown.
+function lvWallTimeLeft(d){
+  var sp=d.spInfo||{},end=sp.endIso?new Date(sp.endIso):null;
+  if(!end||isNaN(end)){var e=pd(sp.end);if(e)end=new Date(e.getFullYear(),e.getMonth(),e.getDate(),23,59,59);}
+  return end&&!isNaN(end)?Math.max(0,end.getTime()-nowMs())/36e5:0;
+}
+function g2TimeHours(v){
+  var n=v<10?Math.round(v*10)/10:Math.round(v);
+  return n+'<small>hrs</small>';
+}
+
 function lvCountdown(d, valueId, labelId){
   if(_lvTimer){ clearInterval(_lvTimer); _lvTimer=null; }
   var sp=d.spInfo||{}, end=sp.endIso?new Date(sp.endIso):null;
@@ -100,6 +111,9 @@ function lvCountdown(d, valueId, labelId){
     el.innerHTML=valueId==='g2Count'
       ? String(dd).padStart(2,'0')+'<span class="sep">d</span> '+String(hh).padStart(2,'0')+'<span class="sep">:</span>'+String(mm).padStart(2,'0')
       : txt.replace(/\d/g,'<span class="dg">$&</span>');
+    if(valueId==='g2Count'){
+      var timeCard=document.getElementById('g2Time');if(timeCard)timeCard.innerHTML=g2TimeHours(ms/36e5);
+    }
     el.parentNode.classList.toggle('ended',ms<=0);
     if(lb) lb.textContent=(sp.state==='closed'||sp.completed)?'Sprint completed':(ms<=0?'Sprint ended':'Time Remaining');
     if(ms<=0 && _lvTimer){ clearInterval(_lvTimer); _lvTimer=null; }
@@ -373,7 +387,7 @@ function g2Monotone(p){
 }
 function g2DrawChart(B,dayNo){
   var el=document.getElementById('g2Chart');if(!el||!B||!B.p||!B.p.length)return;
-  var W=el.clientWidth||700,H=el.clientHeight||500,k=lvK(),P={l:76*k,r:30*k,t:36*k,b:56*k},pts=B.p,start=B.start,end=B.end,last=pts[pts.length-1],nw=(B.nw||[]).slice().sort(function(a,b){return a[0]-b[0];});
+  var W=el.clientWidth||700,H=el.clientHeight||500,k=lvK(),P={l:84*k,r:30*k,t:36*k,b:62*k},pts=B.p,start=B.start,end=B.end,last=pts[pts.length-1],nw=(B.nw||[]).slice().sort(function(a,b){return a[0]-b[0];});
   var maxV=Math.max.apply(null,pts.map(function(p){return Math.max(p[1]||0,p[2]||0);})),yMax=Math.max(100,Math.ceil(maxV/100)*100),span=Math.max(1,end-start),off=nw.reduce(function(s,r){return s+Math.max(0,r[1]-r[0]);},0),work=Math.max(1,span-off);
   var X=function(t){return P.l+(t-start)/span*(W-P.l-P.r);},Y=function(v){return P.t+(1-(v||0)/yMax)*(H-P.t-P.b);};
   function workedTo(t){var w=Math.min(t,end)-start;nw.forEach(function(r){if(r[0]<t)w-=Math.max(0,Math.min(t,r[1])-r[0]);});return Math.max(0,w);}
@@ -382,14 +396,15 @@ function g2DrawChart(B,dayNo){
   var rem=pts.map(function(p){return[X(p[0]),Y(p[1])];}),burn=pts.map(function(p){return[X(p[0]),Y(p[2])];}),ideal=guideT.map(function(t){return[X(t),Y(idealAt(t))];});
   var remD=g2Monotone(rem),burnD=g2Monotone(burn),idealD='M'+ideal.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join('L'),base=Y(0),xn=X(last[0]),idealNow=idealAt(last[0]),gap=(last[1]||0)-idealNow,uid='g2'+Math.random().toString(36).slice(2,7);
   var s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><defs><linearGradient id="'+uid+'r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7ab3" stop-opacity=".24"/><stop offset="1" stop-color="#ff7ab3" stop-opacity="0"/></linearGradient><linearGradient id="'+uid+'b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ee8b5" stop-opacity=".18"/><stop offset="1" stop-color="#3ee8b5" stop-opacity="0"/></linearGradient><filter id="'+uid+'g" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
-  nw.forEach(function(r){var x0=Math.max(P.l,X(r[0])),x1=Math.min(W-P.r,X(r[1]));if(x1>x0)s+='<rect x="'+x0+'" y="'+P.t+'" width="'+(x1-x0)+'" height="'+(base-P.t)+'" rx="'+(14*k)+'" fill="rgba(90,184,255,.04)"/><text x="'+((x0+x1)/2)+'" y="'+(P.t+20*k)+'" text-anchor="middle" font-size="'+(18*k)+'" font-weight="700" letter-spacing=".12em" fill="rgba(90,184,255,.9)">WEEKEND</text>';});
-  for(var h=0;h<=yMax;h+=100){s+='<line x1="'+P.l+'" x2="'+(W-P.r)+'" y1="'+Y(h)+'" y2="'+Y(h)+'" stroke="rgba(255,255,255,.055)" '+(h?'stroke-dasharray="1 7"':'')+'/><text x="'+(P.l-14*k)+'" y="'+(Y(h)+6*k)+'" text-anchor="end" font-size="'+(20*k)+'" font-weight="700" fill="#b8b8c5">'+h+'h</text>';}
-  for(var ti=0;ti<5;ti++){var tt=start+span*ti/4,label=new Date(tt).toLocaleDateString('en-US',{month:'short',day:'2-digit',timeZone:'Asia/Karachi'}).toUpperCase(),anchor=ti===0?'start':(ti===4?'end':'middle'),tx=X(tt)+(ti===0?-4*k:(ti===4?4*k:0));s+='<text x="'+tx+'" y="'+(base+34*k)+'" text-anchor="'+anchor+'" font-size="'+(20*k)+'" font-weight="700" letter-spacing=".06em" fill="#b8b8c5">'+label+'</text>';}
+  nw.forEach(function(r){var x0=Math.max(P.l,X(r[0])),x1=Math.min(W-P.r,X(r[1]));if(x1>x0)s+='<rect x="'+x0+'" y="'+P.t+'" width="'+(x1-x0)+'" height="'+(base-P.t)+'" rx="'+(14*k)+'" fill="rgba(90,184,255,.04)"/><text x="'+((x0+x1)/2)+'" y="'+(P.t+20*k)+'" text-anchor="middle" font-size="'+(18*k)+'" font-weight="700" letter-spacing=".12em" fill="#ffd166">WEEKEND</text>';});
+  for(var h=0;h<=yMax;h+=100){s+='<line x1="'+P.l+'" x2="'+(W-P.r)+'" y1="'+Y(h)+'" y2="'+Y(h)+'" stroke="rgba(255,255,255,.055)" '+(h?'stroke-dasharray="1 7"':'')+'/><text x="'+(P.l-15*k)+'" y="'+(Y(h)+7*k)+'" text-anchor="end" font-size="'+(23*k)+'" font-weight="700" fill="#f0f0f3">'+h+'h</text>';}
+  for(var ti=0;ti<5;ti++){var tt=start+span*ti/4,label=new Date(tt).toLocaleDateString('en-US',{month:'short',day:'2-digit',timeZone:'Asia/Karachi'}).toUpperCase(),anchor=ti===0?'start':(ti===4?'end':'middle'),tx=X(tt)+(ti===0?-4*k:(ti===4?4*k:0));s+='<text x="'+tx+'" y="'+(base+38*k)+'" text-anchor="'+anchor+'" font-size="'+(23*k)+'" font-weight="700" letter-spacing=".06em" fill="#f0f0f3">'+label+'</text>';}
   s+='<path d="'+remD+'L'+xn+','+base+'L'+X(pts[0][0])+','+base+'Z" fill="url(#'+uid+'r)"/><path d="'+burnD+'L'+xn+','+base+'L'+X(pts[0][0])+','+base+'Z" fill="url(#'+uid+'b)"/><path d="'+idealD+'" fill="none" stroke="#5ab8ff" stroke-width="2" stroke-dasharray="5 7" stroke-linecap="round" opacity=".9"/><line x1="'+xn+'" x2="'+xn+'" y1="'+P.t+'" y2="'+base+'" stroke="rgba(90,184,255,.4)" stroke-width="1.5" stroke-dasharray="3 5"/><path d="'+burnD+'" fill="none" stroke="#3ee8b5" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" filter="url(#'+uid+'g)"/><path d="'+remD+'" fill="none" stroke="#ff7ab3" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" filter="url(#'+uid+'g)"/>';
   var y1=Y(last[1]),y2=Y(idealNow),bx=Math.min(W-P.r-2,xn+18),gapColor=gap>=0?'#ff7ab3':'#3ee8b5';s+='<line x1="'+xn+'" x2="'+bx+'" y1="'+y1+'" y2="'+y1+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+xn+'" x2="'+bx+'" y1="'+y2+'" y2="'+y2+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+bx+'" x2="'+bx+'" y1="'+y1+'" y2="'+y2+'" stroke="'+gapColor+'" stroke-width="2"/>';
   [[last[1],'#ff7ab3'],[last[2],'#3ee8b5'],[idealNow,'#5ab8ff']].forEach(function(q,i){s+='<circle cx="'+xn+'" cy="'+Y(q[0])+'" r="'+(i===2?4.5:5)+'" fill="#0a0a0c" stroke="'+q[1]+'" stroke-width="2.5"/>';});s+='</svg>';
-  var gapText=Math.abs(Math.round(gap))+'h '+(gap>0?'behind ideal':(gap<0?'ahead of ideal':'on ideal')),pillW=Math.max(190*k,gapText.length*15*k+50*k),placeLeft=bx+12*k+pillW>W-8*k,pillX=placeLeft?bx-12*k:bx+12*k,pillY=Math.max(48*k,Math.min(H-50*k,(y1+y2)/2)),pillTransform=placeLeft?'translate(-100%,-50%)':'translateY(-50%)';
-  s+='<div class="g2-chart-pill g2-day-pill" style="left:'+xn+'px;top:'+(P.t-2)+'px;transform:translate(-50%,-100%)">Day '+dayNo+'</div><div class="g2-chart-pill g2-gap-pill '+(gap<0?'ahead':'')+'" style="left:'+pillX+'px;top:'+pillY+'px;transform:'+pillTransform+'">'+(gap>0?'+':'')+gapText+'</div>';el.innerHTML=s;
+  var gapText=Math.abs(Math.round(gap))+'h '+(gap>0?'behind ideal':(gap<0?'ahead of ideal':'on ideal')),pillW=Math.max(230*k,gapText.length*19*k+58*k),placeLeft=bx+12*k+pillW>W-8*k,pillX=placeLeft?bx-12*k:bx+12*k,pillY=Math.max(52*k,Math.min(H-54*k,(y1+y2)/2)),pillTransform=placeLeft?'translate(-100%,-50%)':'translateY(-50%)';
+  var dayX=Math.max(70*k,xn-10*k),dayY=P.t+8*k;
+  s+='<div class="g2-chart-pill g2-day-pill" style="left:'+dayX+'px;top:'+dayY+'px;transform:translateX(-100%)">Day '+dayNo+'</div><div class="g2-chart-pill g2-gap-pill '+(gap<0?'ahead':'')+'" style="left:'+pillX+'px;top:'+pillY+'px;transform:'+pillTransform+'">'+(gap>0?'+':'')+gapText+'</div>';el.innerHTML=s;
 }
 function g2DrawDonut(rows,total,colors){
   var el=document.getElementById('g2Donut');if(!el)return;var size=340,thick=28,r=(size-thick)/2,c=2*Math.PI*r,off=0,s='<svg viewBox="0 0 340 340"><circle cx="170" cy="170" r="'+r+'" fill="none" stroke="rgba(255,255,255,.035)" stroke-width="'+thick+'"/>';
@@ -397,16 +412,16 @@ function g2DrawDonut(rows,total,colors){
 }
 function doGlow2Live(d){
   if(CH.lv){CH.lv.destroy();CH.lv=null;}if(CH.lvD){CH.lvD.destroy();CH.lvD=null;}
-  var sp=d.spInfo||{},dayNo=lvDayNo(d),title=sp.id||cur;if(window._space==='MSSD')title=String(title||'').replace(/^MSSD\s+/i,'');document.getElementById('g2Title').innerHTML=g2Title(title);document.getElementById('g2Day').textContent='Day '+dayNo;document.getElementById('g2Start').textContent=g2Date(sp.start);document.getElementById('g2End').textContent=g2Date(sp.end);document.getElementById('g2ChartDates').textContent=g2Date(sp.start)+' – '+g2Date(sp.end);g2SyncTime();lvCountdown(d,'g2Count','g2CountL');
+  var sp=d.spInfo||{},dayNo=lvDayNo(d),title=sp.id||cur;if(window._space==='MSSD')title=String(title||'').replace(/^MSSD\s+/i,'');document.getElementById('g2Title').innerHTML=g2Title(title);document.getElementById('g2Start').textContent=g2Date(sp.start);document.getElementById('g2End').textContent=g2Date(sp.end);g2SyncTime();lvCountdown(d,'g2Count','g2CountL');
   var B=d.burn,total,left,unit='hrs';if(B&&B.p&&B.p.length){total=B.p[0][1];left=B.p[B.p.length-1][1];if(B.unit!=='h')unit='pts';}else{total=d.totEst||0;left=Math.max(0,(d.totEst||0)-(d.totLog||0));}
-  var timeLeft=lvTimeLeft(d),behind=left-timeLeft;
+  var capacityLeft=lvTimeLeft(d),timeLeft=lvWallTimeLeft(d),behind=left-capacityLeft;
   // MMS KPI must match the burndown annotation: Remaining now − Ideal now.
   if(window._space==='MMS'&&B&&B.p&&B.p.length){
     var gLast=B.p[B.p.length-1],gNw=B.nw||[],gSpan=Math.max(1,B.end-B.start),gOff=gNw.reduce(function(s,r){return s+Math.max(0,r[1]-r[0]);},0),gWork=Math.max(1,gSpan-gOff),gWorked=Math.min(gLast[0],B.end)-B.start;
     gNw.forEach(function(r){if(r[0]<gLast[0])gWorked-=Math.max(0,Math.min(gLast[0],r[1])-r[0]);});
     var gIdeal=Math.max(0,B.p[0][1]*(1-Math.max(0,gWorked)/gWork));behind=gLast[1]-gIdeal;
   }
-  document.getElementById('g2Total').innerHTML=g2Num(total,unit);document.getElementById('g2Left').innerHTML=g2Num(left,unit);document.getElementById('g2Time').innerHTML=g2Num(timeLeft,'hrs');document.getElementById('g2Behind').innerHTML=g2Num(Math.abs(behind),'hrs');document.getElementById('g2BehindL').textContent=behind>0?'Hours behind':'Hours ahead';document.getElementById('g2BehindNote').textContent=behind>0?'Behind the ideal burndown':'Ahead of the ideal burndown';document.getElementById('g2BehindCard').classList.toggle('g2-ahead',behind<=0);
+  document.getElementById('g2Total').innerHTML=g2Num(total,unit);document.getElementById('g2Left').innerHTML=g2Num(left,unit);document.getElementById('g2Time').innerHTML=g2TimeHours(timeLeft);document.getElementById('g2Behind').innerHTML=g2Num(Math.abs(behind),'hrs');document.getElementById('g2BehindL').textContent=behind>0?'Hours behind':'Hours ahead';document.getElementById('g2BehindNote').textContent=behind>0?'Behind the ideal burndown':'Ahead of the ideal burndown';document.getElementById('g2BehindCard').classList.toggle('g2-ahead',behind<=0);
   if(B&&B.p&&B.p.length){_g2ChartArgs=[B,dayNo];requestAnimationFrame(function(){g2DrawChart(B,dayNo);});}else document.getElementById('g2Chart').innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
   var m=(window._bpMode==='without'&&d.exBP)?d.exBP:d,so0=m.statusOv||d.statusOv||{rows:[],total:0},statusOrder=window._space==='MSSD'?LV_MSSD_STATUS_ORDER:LV_STATUS_ORDER,statusColors=window._space==='MSSD'?LV_MSSD_STATUS_COLORS:G2_COLORS,rank=function(r){var i=statusOrder.indexOf(String(r.name||'').toLowerCase());return i<0?99:i;},rows=(so0.rows||[]).slice();
   if(window._space==='MSSD'){
@@ -416,7 +431,7 @@ function doGlow2Live(d){
   }
   rows=rows.map(function(r,i){return{r:r,i:i};}).sort(function(a,b){return(rank(a.r)-rank(b.r))||(a.i-b.i);}).map(function(x){return x.r;});
   var ex=0,colors=rows.map(function(r){return statusColors[String(r.name||'').toLowerCase()]||LV_EXTRA_COLORS[ex++%LV_EXTRA_COLORS.length];});
-  document.getElementById('g2StatusTotal').textContent=so0.total||0;g2DrawDonut(rows,so0.total||0,colors);window._g2Open=function(i){var r=rows[i];if(r)nvDetail('Status · '+r.name,r.n+' work item(s)',nvTaskRows(r.items));};document.getElementById('g2StatusList').innerHTML=rows.map(function(r,i){return'<div class="g2-status-row" style="--g2c:'+colors[i]+'" onclick="_g2Open('+i+')"><span class="sw"></span><span class="nm">'+escHtml(r.name)+'</span><span class="ct">'+r.n+'</span><span class="pc">'+pc(r.n,so0.total)+'%</span></div>';}).join('');
+  document.getElementById('g2StatusTotal').textContent=so0.total||0;g2DrawDonut(rows,so0.total||0,colors);window._g2Open=function(i){var r=rows[i];if(r)nvDetail('Status · '+r.name,r.n+' work item(s)',nvTaskRows(r.items));};document.getElementById('g2StatusList').innerHTML=rows.map(function(r,i){var statusName=String(r.name||'').toLowerCase();return'<div class="g2-status-row" data-status="'+escAttr(statusName)+'" style="--g2c:'+colors[i]+'" onclick="_g2Open('+i+')"><span class="sw"></span><span class="nm">'+escHtml(r.name)+'</span><span class="ct">'+r.n+'</span><span class="pc">'+pc(r.n,so0.total)+'%</span></div>';}).join('');
   if(!_g2ResizeBound){_g2ResizeBound=true;window.addEventListener('resize',function(){if(currentPage==='live'&&(window._space==='MMS'||window._space==='MSSD')&&_g2ChartArgs)requestAnimationFrame(function(){g2DrawChart(_g2ChartArgs[0],_g2ChartArgs[1]);});});}
 }
 
