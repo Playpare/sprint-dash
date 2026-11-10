@@ -277,39 +277,11 @@ function lvSizeCenter(ch){
   if(l){ l.style.fontSize=Math.round(Math.max(13*lvK(), fs*0.24))+'px'; l.style.marginTop=Math.round(fs*0.06)+'px'; l.style.letterSpacing='.04em'; }
 }
 
-// ── Slideshow ──
-// Team view for 8 min, then the people with an individual burndown (same people
-// as the MMS Team page's individual chart) in groups of 4: the screen splits
-// into 4 equal quarters, one person each (name, dates, countdown, 4 stat boxes,
-// burndown — no donut). Each group shows for 1 min: after 30 s the top row
-// slides down while the bottom row slides up (a 3 s slide + fade that is NOT
-// counted in the minute, so both halves get a full 30 s), then the next group
-// comes in. After the last group it goes back to the team view. The position
-// survives the quiet auto-refresh / midnight re-render; leaving Live View resets it.
-var LV_MAIN_MS=8*60e3, LV_GROUP_MS=60e3, LV_SWAP_MS=30e3, LV_SWAP_ANIM_MS=3000;   // keep LV_SWAP_ANIM_MS = .lvq-panel transition in live-view.css
 var _lvSyncTimer=null;
-var _lvShow={idx:0, start:0, timer:null, swapped:false};   // idx 0 = team, 1..n = groups[idx-1]
 // The Jira burndown only when it is in hours. A board whose burndown comes in
 // points can't be compared with the hours cards, so Live View shows no chart
 // there and uses the sprint estimate / logged hours instead.
 function lvBurnHours(d){ var B=d && d.burn; return B && B.unit==='h' ? B : null; }
-function lvPeople(d){
-  var B=lvBurnHours(d);
-  if(!B || !B.p || !B.p.length || !B.people) return [];
-  return Object.keys(B.people).filter(function(n){ return (B.people[n]||[]).length; }).sort();
-}
-function lvGroups(d){
-  var p=lvPeople(d), g=[];
-  for(var i=0;i<p.length;i+=4) g.push(p.slice(i,i+4));
-  return g;
-}
-// Group slide = 1 min of viewing + the swap animation (not counted). A group
-// of one person doesn't swap, so it stays exactly 1 min.
-function lvSlideMs(){
-  if(!_lvShow.idx) return LV_MAIN_MS;
-  var g=lvGroups(window._sprintData)[_lvShow.idx-1];
-  return LV_GROUP_MS + (g && g.length>1 ? LV_SWAP_ANIM_MS : 0);
-}
 // Time the latest Jira sync finished in Apps Script (Sync Log, sent as
 // lastSync), top-right of the donut card, e.g. "3:00 AM" (PKT, 12-hour). It
 // moves on with every completed sync, changes or not, as soon
@@ -368,39 +340,6 @@ function lvSyncTime(){
   tick();
   if(d) _lvSyncTimer=setInterval(tick,1000);
 }
-function lvShowTick(){
-  if(currentPage!=='live' || !document.getElementById('page-live')){
-    clearInterval(_lvShow.timer); _lvShow.timer=null; _lvShow.idx=0; return;
-  }
-  var el=Date.now()-_lvShow.start;
-  // Group slide, 30 s in: calm slide + fade — the rows glide past each other
-  // (3 s) while their contents dim to ~35% and back (CSS .lvq-moving).
-  if(_lvShow.idx && !_lvShow.swapped && el>=LV_SWAP_MS){
-    _lvShow.swapped=true;
-    var q=document.getElementById('lvQuad');
-    if(q && !q.classList.contains('lvq-solo')){
-      q.classList.add('lvq-moving','swapped');
-      setTimeout(function(){ q.classList.remove('lvq-moving'); }, LV_SWAP_ANIM_MS+50);
-    }
-  }
-  if(el < lvSlideMs()) return;
-  var d=window._sprintData, n=lvGroups(d).length;
-  _lvShow.idx = _lvShow.idx>=n ? 0 : _lvShow.idx+1;
-  _lvShow.start=Date.now()+750; _lvShow.swapped=false;   // the 0.75 s fade-out isn't counted in the slide's time
-  if(!d) return;
-  var boxes=document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad, #page-live .g2-app');
-  if(!boxes.length){ doLiveView(d); return; }
-  boxes.forEach(function(b){ b.classList.add('lv-out'); });                  // fade out (0.7s)…
-  setTimeout(function(){
-    if(currentPage!=='live') return;
-    doLiveView(window._sprintData||d);                                        // …redraw while invisible…
-    // …and fade in only after the new slide has been painted, so the chart
-    // rebuild never happens during the fade.
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){
-      document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad, #page-live .g2-app').forEach(function(b){ b.classList.remove('lv-out'); });
-    }); });
-  }, 750);
-}
 
 // Day number = today's sprint day (D1…DN; D0 = planning day).
 function lvDayNo(d){
@@ -410,81 +349,6 @@ function lvDayNo(d){
   return dayNo;
 }
 
-// 4 quarters, one person each: name · dates · countdown, the 4 stat boxes and
-// their burndown (smaller chart text). Slots: 0 top-left, 1 top-right,
-// 2 bottom-left, 3 bottom-right; fewer than 4 people → the rest stay empty.
-// "Last updated: 1 Oct 2026" — the newest Jira "updated" time (any change to
-// the issue: status, estimate, worklog, comment, moving it out of the sprint…)
-// across all of the person's issues the dashboard has (sprint, sub-tasks, bugs,
-// backlog). Jira sends it as "2026-10-01T10:15:30.000+0500" or the Sheet as a date.
-function lvPersonUpdated(name){
-  var best=0, me=normPersonName(name);
-  ['tasks','subtasks','bugsTasks','bugSubtasks','backlogTasks','carriedOver','containers'].forEach(function(k){
-    ((raw && raw[k]) || []).forEach(function(t){
-      if(!t || !t.updated || normPersonName(t.assignee)!==me) return;
-      var ms=Date.parse(String(t.updated).replace(/([+-]\d{2})(\d{2})$/,'$1:$2'));
-      if(ms>best) best=ms;
-    });
-  });
-  return best ? 'Last updated: '+new Date(best).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Karachi'}) : '';
-}
-function lvQuadDestroy(){ for(var i=0;i<4;i++){ if(CH['lvq'+i]){ CH['lvq'+i].destroy(); CH['lvq'+i]=null; } } }
-function lvRenderQuad(d, names, dayNo){
-  var q=document.getElementById('lvQuad'); if(!q) return;
-  lvQuadDestroy();
-  var sp=d.spInfo||{}, B=lvBurnHours(d), unit=B.unit==='h'?' hrs':' pts';
-  var daysLeft=Math.max(0,(d.dTot||0)-lvDaysDone(d));
-  var stat=function(l,id){ return '<div class="lv-stat"><div class="l"'+(id?' data-k="'+id+'"':'')+'>'+l+'</div><div class="v"></div></div>'; };
-  // Layout by group size: [grid-column, grid-row, row] per person.
-  //   4 → 2 × 2 · 3 → two on top + one full-width bottom
-  //   2 → one full-width top + one full-width bottom · 1 → one full-width top (no swap)
-  var cnt=names.length;
-  var place = cnt===1 ? [['1 / -1','1','top']]
-    : cnt===2 ? [['1 / -1','1','top'],['1 / -1','2','bottom']]
-    : cnt===3 ? [['1','1','top'],['2','1','top'],['1 / -1','2','bottom']]
-    : [['1','1','top'],['2','1','top'],['1','2','bottom'],['2','2','bottom']];
-  // One progress line across the top of the screen (above the top cards) that
-  // fills up over the group's 20 s — stays put when the rows swap.
-  var html='<div class="lvq-prog"><i id="lvqProg"></i></div>';
-  for(var i=0;i<cnt;i++){
-    var n=names[i], pl=place[i];
-    html+='<div class="lv-card lvq-panel" data-slot="'+i+'" data-row="'+pl[2]+'" style="grid-column:'+pl[0]+';grid-row:'+pl[1]+'"><div class="lvq-in">'
-      +'<div class="lvq-head"><div class="lvq-name">'+escHtml(n)+'</div><div class="lvq-upd">'+escHtml(lvPersonUpdated(n))+'</div></div>'
-      +'<div class="lv-stats">'+stat('Total Work')+stat('Work Left To Do')+stat('Left To Do It')+stat('Hours Behind','b')+'</div>'
-      +'<div class="lv-chart lvq-chart"><canvas id="lvqC'+i+'"></canvas></div>'
-      +'</div></div>';
-  }
-  // New panels must appear in place (swapped or not) without sliding there.
-  q.classList.add('lvq-still');
-  q.classList.toggle('lvq-solo', cnt===1);                  // one person: stays put
-  q.classList.toggle('swapped', !!_lvShow.swapped && cnt>1);
-  q.innerHTML=html;
-  void q.offsetWidth;
-  q.classList.remove('lvq-still');
-  names.forEach(function(n,i){
-    var panel=q.querySelector('.lvq-panel[data-slot="'+i+'"]'); if(!panel) return;
-    var r=lvBurn(Object.assign({}, B, {p:B.people[n]}), dayNo, {canvas:'lvqC'+i, key:'lvq'+i, scale:.85});
-    var timeLeft=daysLeft*lvPersonHours(d, n), behind=r.gap>0.5;   // same rule as the chart's label
-    var v=panel.querySelectorAll('.lv-stat .v');
-    v[0].textContent=lvHrs(r.start,unit); v[1].textContent=lvHrs(r.left,unit); v[2].textContent=lvHrs(timeLeft);
-    panel.querySelector('[data-k="b"]').textContent=behind?'Hours Behind':'Hours Ahead';
-    v[3].textContent=lvHrs(Math.abs(r.gap),unit); v[3].className='v '+(behind?'bad':'good');
-  });
-}
-// Thin line at the top that fills up until the next slide (team card, or the
-// one line above the top cards on a group slide).
-function lvSlideProgress(){
-  var bar=document.getElementById(_lvShow.idx ? 'lvqProg' : 'lvProg'); if(!bar) return;
-  var dur=lvSlideMs(), done=Math.min(1,(Date.now()-_lvShow.start)/dur);
-  bar.style.transition='none'; bar.style.width=(done*100)+'%';
-  void bar.offsetWidth;
-  bar.style.transition='width '+Math.max(0,(1-done)*dur)+'ms linear'; bar.style.width='100%';
-}
-function lvPersonHours(d, name){
-  var h=null;
-  Object.keys(d.teamCapacity||{}).forEach(function(k){ var c=d.teamCapacity[k]; if(normPersonName(c.name||k)===normPersonName(name)) h=parseFloat(c.hours)||6; });
-  return h!=null?h:6;
-}
 
 /* MMS Glow 2 ------------------------------------------------------------- */
 var _g2ChartArgs=null, _g2ResizeBound=false;
@@ -576,34 +440,19 @@ function doLiveView(d){
   var page=document.getElementById('page-live');
   if(!page) return;
   page.classList.toggle('mss3d-live',window._space==='MSSD');
-  // MMS and MSS3D use the Glow 2 team view; the person slides stay as before.
+  // MMS and MSS3D use the Glow 2 team view.
   var useGlow2=window._space==='MMS'||window._space==='MSSD';
   page.classList.toggle('glow2-live',useGlow2);
   var rootEl=document.getElementById('root');if(rootEl)rootEl.classList.toggle('glow2-mode',useGlow2);
-  if(!_lvShow.timer){ _lvShow.idx=0; _lvShow.start=Date.now(); _lvShow.swapped=false; _lvShow.timer=setInterval(lvShowTick,1000); }
-  var groups=lvGroups(d);
-  if(_lvShow.idx>groups.length) _lvShow.idx=0;
   var sp=d.spInfo||{}, dayNo=lvDayNo(d);
 
-  // Group slide: 4 quarters (the team view is hidden while it shows).
-  if(_lvShow.idx){
-    page.classList.add('lv-quad-on');
-    lvRenderQuad(d, groups[_lvShow.idx-1], dayNo);
-    lvSlideProgress();
-    lvCountdown(d);
-    return;
-  }
-  page.classList.remove('lv-quad-on');
-  lvQuadDestroy();
   if(useGlow2){doGlow2Live(d);return;}
 
-  lvSlideProgress();
   lvSyncTime();
   var titleEl=document.getElementById('lvTitle');
   var liveTitle=sp.id||cur;
   if(window._space==='MSSD') liveTitle=String(liveTitle||'').replace(/^MSSD\s+/i,'');
   titleEl.textContent=liveTitle;
-  titleEl.classList.remove('is-person');
   var capEl=document.getElementById('lvCap');
   if(capEl) capEl.textContent='';
   document.getElementById('lvStart').textContent=lvMonDay(sp.start);

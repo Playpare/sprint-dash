@@ -53,8 +53,6 @@
   #root.live-mode #page-live{height:100%;min-height:0}
   #root.live-mode #page-live .lv-wrap{height:100%;min-height:0}
   #root.live-mode #page-live .lv-card{min-height:0;overflow:hidden}
-  #root.live-mode #page-live .lv-quad{height:100%;min-height:0}
-  #root.live-mode #page-live .lv-quad .lv-chart{min-height:0}
 }
 
 /* Fill the whole screen height (page padding is 22px top + bottom). */
@@ -78,15 +76,9 @@
 #page-live .lv-count .l{font-size:16px;font-weight:600;color:var(--amb);margin-top:2px}
 #page-live .lv-count.ended .v,#page-live .lv-count.ended .l{color:var(--mut)}
 
-/* Slideshow (live-view.js): caption above a person's name, thin progress line
-   at the top of the card until the next slide, and a soft fade between slides. */
-#page-live .lv-main{position:relative}
-#page-live .lv-prog{position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;overflow:hidden;pointer-events:none}
-#page-live .lv-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00E5C3,#4D9FFF);opacity:.85}
 #page-live .lv-tw{min-width:0;justify-self:start}
 #page-live .lv-cap{font-size:16px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;white-space:nowrap}
 #page-live .lv-cap:empty{display:none}
-#page-live .lv-title.is-person{font-size:clamp(34px,2.4vw,48px);overflow:hidden;text-overflow:ellipsis}
 /* Next-update countdown on the left and last Jira sync on the right, on one
    line above the donut. Absolutely positioned so the donut keeps its size. */
 #page-live .lv-side{position:relative}
@@ -101,56 +93,12 @@
 @keyframes lvSyncPulse{0%,100%{opacity:.35}50%{opacity:1}}
 #page-live .lv-sync-last{margin-left:auto;text-align:right}
 #page-live .lv-sync:empty{display:none}
-/* Pure opacity fade (no movement — cheapest for TV browsers). The card boxes
-   stay on screen; only what's inside them (header, stats, chart, donut, legend)
-   fades out, is redrawn while invisible, then fades back in. The progress line
-   stays visible. */
-#page-live .lv-wrap>.lv-card>:not(.lv-prog){transition:opacity .7s ease-in-out;will-change:opacity}
-#page-live .lv-wrap.lv-out>.lv-card>:not(.lv-prog){opacity:0}
-@media (prefers-reduced-motion: reduce){ #page-live .lv-wrap>.lv-card>:not(.lv-prog){transition:none} }
-
-/* Group slides: the screen splits into 4 equal quarters, one person each
-   (name · dates · countdown, 4 stat boxes, burndown — no donut). 10 s in, the
-   top pair slides down while the bottom pair slides up (.swapped). Contents
-   fade like the team view; the panel boxes stay. */
-#page-live .lv-quad{--lvq-gap:14px;display:none;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:var(--lvq-gap);min-height:calc(100vh - 44px)}
-#page-live.lv-quad-on .lv-wrap{display:none}
-#page-live.lv-quad-on .lv-quad{display:grid}
-/* One progress line along the top edge of the top cards (not part of the grid,
-   doesn't move with the swap, doesn't fade). */
-#page-live .lv-quad{position:relative}
-#page-live .lvq-prog{position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;overflow:hidden;pointer-events:none;z-index:3}
-#page-live .lvq-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00E5C3,#4D9FFF);opacity:.85}
-#page-live .lvq-panel{display:flex;flex-direction:column;position:relative;transition:transform 3s cubic-bezier(.4,0,.2,1);will-change:transform}
-/* Top row slides down, bottom row slides up (full-width cards too). */
-#page-live .lv-quad.swapped .lvq-panel[data-row="top"]{transform:translateY(calc(100% + var(--lvq-gap)))}
-#page-live .lv-quad.swapped .lvq-panel[data-row="bottom"]{transform:translateY(calc(-100% - var(--lvq-gap)))}
-#page-live .lv-quad.lvq-still .lvq-panel{transition:none}
-#page-live .lvq-in{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;transition:opacity .7s ease-in-out;will-change:opacity}
-#page-live .lv-quad.lv-out .lvq-in{opacity:0}
-/* Row swap at 10 s — a calm slide + fade: the cards glide to the other row over
-   3 s (soft start and stop) while their contents gently dim to ~35% and come
-   back, so the move is visible but doesn't pull attention. */
-@keyframes lvqDim{0%{opacity:1}50%{opacity:.35}100%{opacity:1}}
-#page-live .lv-quad.lvq-moving .lvq-in{animation:lvqDim 3s ease-in-out}
-#page-live .lvq-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:10px;min-width:0}
-#page-live .lvq-name{font-size:36px;font-weight:800;line-height:1.1;color:var(--text);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-#page-live .lvq-upd{flex:none;margin-left:auto;font-size:25px;font-weight:700;color:var(--mut);white-space:nowrap}
-#page-live .lvq-upd:empty{display:none}
-#page-live .lv-quad .lv-stats{gap:10px;margin-bottom:12px}
-/* Individual cards: number on top, label underneath. */
-#page-live .lv-quad .lv-stat{padding:10px 14px;display:flex;flex-direction:column-reverse;justify-content:flex-end}
-#page-live .lv-quad .lv-stat .l{font-size:16px;margin-top:4px;font-weight:800;color:#dbe1f5;letter-spacing:.02em}
-#page-live .lv-quad .lv-stat .v{font-size:30px;margin-top:0}
-#page-live .lv-quad .lv-chart{flex:1 1 auto;height:0;min-height:120px;padding:6px 8px 2px}
-@media (prefers-reduced-motion: reduce){ #page-live .lvq-panel,#page-live .lvq-in{transition:none;animation:none} }
-
 /* Stat boxes */
 #page-live .lv-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
 #page-live .lv-stat{background:var(--sur2);border:1px solid var(--bor);border-radius:10px;padding:14px 18px}
 #page-live .lv-stat .l{font-size:15px;font-weight:600;color:var(--mut);text-transform:uppercase;line-height:1.3}
 #page-live .lv-stat .v{font-family:var(--lv-font);font-size:34px;font-weight:800;line-height:1.15;color:var(--text);margin-top:6px;white-space:nowrap}
-/* Team slide: bigger cards, bolder / brighter labels and larger hours. */
+/* Overall view: bigger cards, bolder / brighter labels and larger hours. */
 #page-live .lv-wrap .lv-stat{padding:18px 22px}
 #page-live .lv-wrap .lv-stat .l{font-size:17px;font-weight:800;color:#dbe1f5;letter-spacing:.02em}
 #page-live .lv-wrap .lv-stat .v{font-size:44px;margin-top:8px}
@@ -262,12 +210,6 @@
 #page-live.glow2-live.mss3d-live .g2-status-row .pc{width:64px;font-size:19px;font-weight:700;padding:3px 0}
 @media(max-width:1450px){#page-live.glow2-live .g2-body{grid-template-columns:230px minmax(0,1fr) 350px;gap:16px}#page-live.glow2-live .g2-app{gap:16px}#page-live.glow2-live .g2-pills{gap:8px;margin-left:0}#page-live.glow2-live .g2-pill{padding:9px 13px}#page-live.glow2-live .g2-count{padding:7px 13px 7px 8px}#page-live.glow2-live .g2-count-icon{width:42px;height:42px}#page-live.glow2-live .g2-kpi{padding:16px 18px}#page-live.glow2-live .g2-kpi-value{font-size:40px}#page-live.glow2-live .g2-kpi-label{font-size:18px}#page-live.glow2-live .g2-chart-card,#page-live.glow2-live .g2-status{padding:18px}#page-live.glow2-live .g2-chart-legend{gap:12px;font-size:15px}#page-live.glow2-live .g2-status-row{padding:8px 12px}.g2-status-row .nm{font-size:18px}}
 
-/* Slideshow with Glow 2: hide the Glow 2 team view on person slides, and fade
-   it between slides like the classic view. */
-#page-live.glow2-live.lv-quad-on .g2-app{display:none}
-#page-live.glow2-live .g2-app{transition:opacity .7s ease-in-out}
-#page-live.glow2-live .g2-app.lv-out{opacity:0}
-@media (prefers-reduced-motion: reduce){ #page-live.glow2-live .g2-app{transition:none} }
 @media(max-width:1200px){
   #page-live .lv-wrap{grid-template-columns:1fr;min-height:0}
   #page-live .lv-chart{flex:none;height:470px}
@@ -293,7 +235,6 @@
   #page-live .lv-card{padding:.94vw 1.04vw;border-radius:.63vw}
   #page-live .lv-head{gap:1.04vw;margin-bottom:.83vw}
   #page-live .lv-title{font-size:3.2vw}
-  #page-live .lv-title.is-person{font-size:2.4vw}
   #page-live .lv-cap{font-size:.83vw;margin-bottom:.21vw}
   #page-live .lv-prog{height:2px}
   #page-live .lv-dates{gap:.63vw}
@@ -319,17 +260,6 @@
   #page-live .lv-leg .c{font-size:1.77vw}
   #page-live .lv-leg .p{font-size:1.72vw}
   #page-live .lv-sync{top:.73vw;right:.83vw;font-size:1.25vw}
-  /* group slides (4 quarters), same vw scaling */
-  #root.live-mode #page-live .lv-quad{height:100%;min-height:0;--lvq-gap:.73vw}
-  #page-live .lvq-head{gap:.83vw;margin-bottom:.52vw}
-  #page-live .lvq-prog{height:2px}
-  #page-live .lvq-name{font-size:1.88vw}
-  #page-live .lvq-upd{font-size:1.3vw}
-  #page-live .lv-quad .lv-stats{gap:.52vw;margin-bottom:.63vw}
-  #page-live .lv-quad .lv-stat{padding:.52vw .73vw}
-  #page-live .lv-quad .lv-stat .l{font-size:.83vw;margin-top:.21vw}
-  #page-live .lv-quad .lv-stat .v{font-size:1.56vw;margin-top:0}
-  #page-live .lv-quad .lv-chart{min-height:0;padding:.31vw .42vw .1vw}
 
   /* Glow 2 uses the same 1920px-reference scaling as the former TV UI. */
   #root.live-mode #page-live .g2-app{height:100%;min-height:0;gap:1.15vw}
@@ -391,7 +321,6 @@
   #page-live .lv-title,#page-live .lv-count .v{font-size:26px}
   #page-live .lv-head{grid-template-columns:1fr;justify-items:center;text-align:center}
   #page-live .lv-title,#page-live .lv-count,#page-live .lv-tw{justify-self:center;text-align:center}
-  #page-live .lv-title.is-person{font-size:24px}
   #page-live .lv-cap{font-size:12px}
   #page-live .lv-chart{flex:none;height:340px}
   #page-live .lv-leg{grid-template-columns:26px minmax(0,1fr) 62px 62px;gap:10px}
