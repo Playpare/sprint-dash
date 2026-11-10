@@ -225,6 +225,7 @@
 #page-live.glow2-live .g2-kpi.g2-ahead{background:linear-gradient(145deg,rgba(62,232,181,.12),rgba(62,232,181,.025));border-color:rgba(62,232,181,.25)}
 #page-live.glow2-live .g2-kpi.g2-ahead .g2-kpi-value{color:var(--g2-done)}
 #page-live.glow2-live .g2-kpi-note{font-size:20px;font-weight:600;color:rgba(255,122,179,.95);margin-top:10px;white-space:nowrap;transform:translateX(-10px)}
+#page-live.glow2-live .g2-kpi-note{display:none}
 #page-live.glow2-live .g2-ahead .g2-kpi-note{color:var(--g2-done)}
 #page-live.glow2-live .g2-chart-card{padding:22px 20px 12px;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
 #page-live.glow2-live .g2-card-head{display:flex;justify-content:space-between;align-items:center;gap:18px;flex:none}
@@ -329,6 +330,59 @@
   #page-live .lv-quad .lv-stat .l{font-size:.83vw;margin-top:.21vw}
   #page-live .lv-quad .lv-stat .v{font-size:1.56vw;margin-top:0}
   #page-live .lv-quad .lv-chart{min-height:0;padding:.31vw .42vw .1vw}
+
+  /* Glow 2 uses the same 1920px-reference scaling as the former TV UI. */
+  #root.live-mode #page-live .g2-app{height:100%;min-height:0;gap:1.15vw}
+  #page-live.glow2-live .g2-header{gap:1.04vw}
+  #page-live.glow2-live .g2-title{font-size:3vw}
+  #page-live.glow2-live .g2-pills{gap:.73vw;margin-left:.63vw}
+  #page-live.glow2-live .g2-pill{gap:.63vw;padding:.68vw 1.25vw;font-size:1.3vw}
+  #page-live.glow2-live .g2-live-pill i{width:.63vw;height:.63vw}
+  #page-live.glow2-live .g2-count{gap:.83vw;padding:.52vw 1.15vw .52vw .63vw}
+  #page-live.glow2-live .g2-count-icon{width:2.81vw;height:2.81vw}
+  #page-live.glow2-live .g2-count-icon svg{width:1.15vw;height:1.15vw}
+  #page-live.glow2-live .g2-count b{font-size:2.2vw}
+  #page-live.glow2-live .g2-count small{font-size:.83vw;margin-top:.26vw}
+
+  #page-live.glow2-live .g2-body{grid-template-columns:14.06vw minmax(0,1fr) 22.92vw;gap:.94vw;min-height:0}
+  #page-live.glow2-live .g2-kpis{gap:.83vw}
+  #page-live.glow2-live .g2-kpi{padding:1.15vw 1.25vw;border-radius:1.35vw}
+  #page-live.glow2-live .g2-kpi-label{gap:.63vw;font-size:1.35vw}
+  #page-live.glow2-live .g2-kpi-label i{width:.63vw;height:.63vw}
+  #page-live.glow2-live .g2-kpi-value{font-size:3.125vw;margin-top:.73vw}
+  #page-live.glow2-live .g2-kpi-value small{font-size:1.25vw;margin-left:.36vw}
+
+  #page-live.glow2-live .g2-chart-card{padding:1.15vw 1.04vw .63vw;border-radius:1.35vw}
+  #page-live.glow2-live .g2-card-head{gap:.94vw}
+  #page-live.glow2-live .g2-card-head h2{font-size:1.46vw}
+  #page-live.glow2-live .g2-card-head h2 small{font-size:.99vw;margin-left:.52vw}
+  #page-live.glow2-live .g2-chart-legend{gap:1.35vw;font-size:1.02vw}
+  #page-live.glow2-live .g2-chart-legend span{gap:.42vw}
+  #page-live.glow2-live .g2-chart-legend i{width:1.35vw;height:.26vw}
+  #page-live.glow2-live .g2-chart{margin-top:1.04vw}
+  #page-live.glow2-live .g2-chart-pill{font-size:1.15vw;padding:.42vw .89vw}
+
+  #page-live.glow2-live .g2-status{padding:1.25vw 1.35vw;border-radius:1.35vw}
+  #page-live.glow2-live .g2-meta{font-size:.94vw}
+  #page-live.glow2-live .g2-donut-wrap{width:min(17.7vw,36vh);height:min(17.7vw,36vh);margin:.21vw auto .42vw;transform:none}
+  #page-live.glow2-live .g2-donut-wrap:before{inset:2.08vw}
+  #page-live.glow2-live .g2-donut-center b{font-size:5.42vw}
+  #page-live.glow2-live .g2-donut-center span{font-size:1.3vw;margin-top:.36vw}
+  #page-live.glow2-live .g2-status-list{gap:.31vw;margin-top:0;flex:1;justify-content:space-between}
+  #page-live.glow2-live .g2-status-row{grid-template-columns:.63vw minmax(0,1fr) auto 3.65vw;gap:.73vw;padding:.47vw .78vw;border-radius:.83vw}
+  #page-live.glow2-live .g2-status-row .sw{width:.52vw;height:.52vw}
+  #page-live.glow2-live .g2-status-row .nm{font-size:1.35vw}
+  #page-live.glow2-live .g2-status-row .ct{font-size:1.51vw}
+  #page-live.glow2-live .g2-status-row .pc{width:3.65vw;font-size:1.09vw;padding:.21vw 0}
+
+  #page-live.glow2-live.mss3d-live .g2-donut-wrap{width:min(15.6vw,29vh);height:min(15.6vw,29vh);margin:.1vw auto .26vw}
+  #page-live.glow2-live.mss3d-live .g2-donut-center b{font-size:4.48vw}
+  #page-live.glow2-live.mss3d-live .g2-donut-center span{font-size:1.04vw}
+  #page-live.glow2-live.mss3d-live .g2-status-list{gap:.1vw}
+  #page-live.glow2-live.mss3d-live .g2-status-row{grid-template-columns:.57vw minmax(0,1fr) auto 3.33vw;gap:.57vw;padding:.26vw .63vw;border-radius:.68vw}
+  #page-live.glow2-live.mss3d-live .g2-status-row .nm{font-size:1.25vw}
+  #page-live.glow2-live.mss3d-live .g2-status-row .ct{font-size:1.35vw}
+  #page-live.glow2-live.mss3d-live .g2-status-row .pc{width:3.33vw;font-size:.99vw;padding:.16vw 0}
 }
 @media(max-width:720px){
   #page-live .lv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
