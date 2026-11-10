@@ -9,13 +9,15 @@
    Without a Jira burndown in hours the sprint estimate / logged hours are used, with
    a straight guideline over the sprint's working days. */
 var _lvTimer=null;
-var LV_STATUS_COLORS={'done':'#3ecf8e','to do':'#4c8df6','in progress':'#fdd33c','in review':'#e5484d','paused':'#9d6bf7'};
+var LV_STATUS_COLORS={'done':'#3ee8b5','to do':'#f05252','in progress':'#fdd33c','in review':'#4c8df6','paused':'#9d6bf7'};
 // Donut + legend order: Done, To Do, In Progress, In Review, Paused, then any other status.
 var LV_STATUS_ORDER=['done','to do','in progress','in review','paused'];
+// Any other Jira status (not one of the five above) gets the next colour here.
+var LV_EXTRA_COLORS=['#22c4c4','#5b6ef5','#ff8fab','#0aaa62','#ffc56b','#d98a0b'];
 // My Supermarket Simulator - Delivery: Jira's requested nine-status legend.
 var LV_MSSD_STATUS_ORDER=['to do','done','in progress','in review','dev done','paused','build awaiting','cancelled','reopened'];
 var LV_MSSD_STATUS_COLORS={
-  'to do':'#4c8df6','done':'#f05252','in progress':'#bf9100','in review':'#22a06b',
+  'to do':'#f05252','done':'#3ee8b5','in progress':'#bf9100','in review':'#4c8df6',
   'dev done':'#2f9ab8','paused':'#9d6bf7','build awaiting':'#858890',
   'cancelled':'#4c8df6','reopened':'#f05252'
 };
@@ -75,11 +77,12 @@ function lvCountdownWorkingDays(now, end){
   return count;
 }
 
-function lvCountdown(d){
+function lvCountdown(d, valueId, labelId){
   if(_lvTimer){ clearInterval(_lvTimer); _lvTimer=null; }
   var sp=d.spInfo||{}, end=sp.endIso?new Date(sp.endIso):null;
   if(!end||isNaN(end)){ var e2=pd(sp.end); if(e2) end=new Date(e2.getFullYear(),e2.getMonth(),e2.getDate(),23,59,59); }
-  var el=document.getElementById('lvCount'), lb=document.getElementById('lvCountL');
+  valueId=valueId||'lvCount'; labelId=labelId||'lvCountL';
+  var el=document.getElementById(valueId), lb=document.getElementById(labelId);
   if(!el) return;
   var day=lvToday().getTime();
   function tick(){
@@ -96,7 +99,9 @@ function lvCountdown(d){
     // LINE Seed Sans has proportional digits only, so each digit gets a fixed-width
     // box — the countdown doesn't shift sideways when a digit changes.
     var txt=String(dd).padStart(2,'0')+'D '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
-    el.innerHTML=txt.replace(/\d/g,'<span class="dg">$&</span>');
+    el.innerHTML=valueId==='g2Count'
+      ? String(dd).padStart(2,'0')+'<span class="sep">d</span> '+String(hh).padStart(2,'0')+'<span class="sep">:</span>'+String(mm).padStart(2,'0')
+      : txt.replace(/\d/g,'<span class="dg">$&</span>');
     el.parentNode.classList.toggle('ended',ms<=0);
     if(lb) lb.textContent=(sp.state==='closed'||sp.completed)?'Sprint completed':(ms<=0?'Sprint ended':'Time Remaining');
     if(ms<=0 && _lvTimer){ clearInterval(_lvTimer); _lvTimer=null; }
@@ -383,7 +388,7 @@ function lvShowTick(){
   _lvShow.idx = _lvShow.idx>=n ? 0 : _lvShow.idx+1;
   _lvShow.start=Date.now()+750; _lvShow.swapped=false;   // the 0.75 s fade-out isn't counted in the slide's time
   if(!d) return;
-  var boxes=document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad');
+  var boxes=document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad, #page-live .g2-app');
   if(!boxes.length){ doLiveView(d); return; }
   boxes.forEach(function(b){ b.classList.add('lv-out'); });                  // fade out (0.7s)…
   setTimeout(function(){
@@ -392,7 +397,7 @@ function lvShowTick(){
     // …and fade in only after the new slide has been painted, so the chart
     // rebuild never happens during the fade.
     requestAnimationFrame(function(){ requestAnimationFrame(function(){
-      document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad').forEach(function(b){ b.classList.remove('lv-out'); });
+      document.querySelectorAll('#page-live .lv-wrap, #page-live .lv-quad, #page-live .g2-app').forEach(function(b){ b.classList.remove('lv-out'); });
     }); });
   }, 750);
 }
@@ -481,11 +486,100 @@ function lvPersonHours(d, name){
   return h!=null?h:6;
 }
 
+/* MMS Glow 2 ------------------------------------------------------------- */
+var _g2ChartArgs=null, _g2ResizeBound=false;
+var G2_COLORS={'done':'#3ee8b5','to do':'#f05252','in progress':'#ffd166','in review':'#4c8df6','paused':'#a68bff'};
+function g2Num(v,unit){ return Math.round(v||0)+'<small>'+(unit||'hrs')+'</small>'; }
+function g2Date(v){ var x=v instanceof Date?v:pd(v); return x?x.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'Asia/Karachi'}):'—'; }
+function g2Title(v){
+  var a=String(v||'').trim().split(/\s+/), last=a.pop()||'';
+  return escHtml(a.join(' '))+(a.length?' ':'')+'<em>'+escHtml(last)+'</em>';
+}
+function g2SyncTime(){
+  var state=document.getElementById('g2SyncState'), updated=document.getElementById('g2Updated');
+  if(!state||!updated) return;
+  var d=lvSyncDate(raw&&raw.lastSync), step=6*60000, stamp=String(raw&&raw.lastSync||''), deadline=d?d.getTime()+step:0;
+  try{
+    var key='lv_sync_countdown:'+(window._space||'MMS'), saved=JSON.parse(localStorage.getItem(key)||'null');
+    if(saved&&saved.stamp===stamp&&isFinite(saved.deadline)) deadline=Number(saved.deadline);
+    else if(d){ deadline=saved&&saved.stamp?nowMs()+step:d.getTime()+step; localStorage.setItem(key,JSON.stringify({stamp:stamp,deadline:deadline})); }
+  }catch(e){}
+  if(_lvSyncTimer){clearInterval(_lvSyncTimer);_lvSyncTimer=null;}
+  function tick(){
+    if(!document.body.contains(state)){clearInterval(_lvSyncTimer);_lvSyncTimer=null;return;}
+    if(!d){state.className='g2-pill g2-live-pill';state.innerHTML='<i></i>Next update —';updated.textContent='—';return;}
+    var now=nowMs(), left=Math.max(0,deadline-now), sec=Math.ceil(left/1000), mm=Math.floor(sec/60), ss=sec%60;
+    updated.textContent=d.toLocaleTimeString('en-US',{timeZone:'Asia/Karachi',hour:'numeric',minute:'2-digit',hour12:true});
+    if(now>=deadline+3*60000){state.className='g2-pill g2-live-pill delayed';state.innerHTML='<i></i>Update delayed…';}
+    else if(now>=deadline){state.className='g2-pill g2-live-pill';state.innerHTML='<i></i>Update in progress…';}
+    else{state.className='g2-pill g2-live-pill '+(left>3*60000?'safe':'');state.innerHTML='<i></i>Next update '+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
+  }
+  tick(); if(d)_lvSyncTimer=setInterval(tick,1000);
+}
+function g2Monotone(p){
+  var n=p.length;if(n<2)return'';if(n<3)return'M'+p.map(function(q){return q[0]+','+q[1];}).join('L');
+  var dx=[],m=[],t=[],i;for(i=0;i<n-1;i++){dx[i]=p[i+1][0]-p[i][0];m[i]=(p[i+1][1]-p[i][1])/Math.max(.001,dx[i]);}
+  t[0]=m[0];t[n-1]=m[n-2];for(i=1;i<n-1;i++)t[i]=m[i-1]*m[i]<=0?0:(m[i-1]+m[i])/2;
+  for(i=0;i<n-1;i++){if(m[i]===0){t[i]=t[i+1]=0;continue;}var a=t[i]/m[i],b=t[i+1]/m[i],s=a*a+b*b;if(s>9){var k=3/Math.sqrt(s);t[i]=k*a*m[i];t[i+1]=k*b*m[i];}}
+  var d='M'+p[0][0].toFixed(1)+','+p[0][1].toFixed(1);for(i=0;i<n-1;i++){var h=dx[i]/3;d+='C'+(p[i][0]+h).toFixed(1)+','+(p[i][1]+t[i]*h).toFixed(1)+' '+(p[i+1][0]-h).toFixed(1)+','+(p[i+1][1]-t[i+1]*h).toFixed(1)+' '+p[i+1][0].toFixed(1)+','+p[i+1][1].toFixed(1);}return d;
+}
+function g2DrawChart(B,dayNo){
+  var el=document.getElementById('g2Chart');if(!el||!B||!B.p||!B.p.length)return;
+  var W=el.clientWidth||700,H=el.clientHeight||500,P={l:76,r:30,t:36,b:56},pts=B.p,start=B.start,end=B.end,last=pts[pts.length-1],nw=(B.nw||[]).slice().sort(function(a,b){return a[0]-b[0];});
+  var maxV=Math.max.apply(null,pts.map(function(p){return Math.max(p[1]||0,p[2]||0);})),yMax=Math.max(100,Math.ceil(maxV/100)*100),span=Math.max(1,end-start),off=nw.reduce(function(s,r){return s+Math.max(0,r[1]-r[0]);},0),work=Math.max(1,span-off);
+  var X=function(t){return P.l+(t-start)/span*(W-P.l-P.r);},Y=function(v){return P.t+(1-(v||0)/yMax)*(H-P.t-P.b);};
+  function workedTo(t){var w=Math.min(t,end)-start;nw.forEach(function(r){if(r[0]<t)w-=Math.max(0,Math.min(t,r[1])-r[0]);});return Math.max(0,w);}
+  function idealAt(t){return Math.max(0,pts[0][1]*(1-workedTo(t)/work));}
+  var guideT=[start];nw.forEach(function(r){guideT.push(r[0],r[1]);});guideT.push(end);guideT=guideT.filter(function(t,i,a){return t>=start&&t<=end&&(!i||t!==a[i-1]);});
+  var rem=pts.map(function(p){return[X(p[0]),Y(p[1])];}),burn=pts.map(function(p){return[X(p[0]),Y(p[2])];}),ideal=guideT.map(function(t){return[X(t),Y(idealAt(t))];});
+  var remD=g2Monotone(rem),burnD=g2Monotone(burn),idealD='M'+ideal.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join('L'),base=Y(0),xn=X(last[0]),idealNow=idealAt(last[0]),gap=(last[1]||0)-idealNow,uid='g2'+Math.random().toString(36).slice(2,7);
+  var s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><defs><linearGradient id="'+uid+'r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7ab3" stop-opacity=".24"/><stop offset="1" stop-color="#ff7ab3" stop-opacity="0"/></linearGradient><linearGradient id="'+uid+'b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ee8b5" stop-opacity=".18"/><stop offset="1" stop-color="#3ee8b5" stop-opacity="0"/></linearGradient><filter id="'+uid+'g" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  nw.forEach(function(r){var x0=Math.max(P.l,X(r[0])),x1=Math.min(W-P.r,X(r[1]));if(x1>x0)s+='<rect x="'+x0+'" y="'+P.t+'" width="'+(x1-x0)+'" height="'+(base-P.t)+'" rx="14" fill="rgba(90,184,255,.04)"/><text x="'+((x0+x1)/2)+'" y="'+(P.t+20)+'" text-anchor="middle" font-size="18" font-weight="700" letter-spacing=".12em" fill="rgba(90,184,255,.9)">WEEKEND</text>';});
+  for(var h=0;h<=yMax;h+=100){s+='<line x1="'+P.l+'" x2="'+(W-P.r)+'" y1="'+Y(h)+'" y2="'+Y(h)+'" stroke="rgba(255,255,255,.055)" '+(h?'stroke-dasharray="1 7"':'')+'/><text x="'+(P.l-14)+'" y="'+(Y(h)+6)+'" text-anchor="end" font-size="20" font-weight="700" fill="#b8b8c5">'+h+'h</text>';}
+  for(var ti=0;ti<5;ti++){var tt=start+span*ti/4,label=new Date(tt).toLocaleDateString('en-US',{month:'short',day:'2-digit',timeZone:'Asia/Karachi'}).toUpperCase(),anchor=ti===0?'start':(ti===4?'end':'middle'),tx=X(tt)+(ti===0?-4:(ti===4?4:0));s+='<text x="'+tx+'" y="'+(base+34)+'" text-anchor="'+anchor+'" font-size="20" font-weight="700" letter-spacing=".06em" fill="#b8b8c5">'+label+'</text>';}
+  s+='<path d="'+remD+'L'+xn+','+base+'L'+X(pts[0][0])+','+base+'Z" fill="url(#'+uid+'r)"/><path d="'+burnD+'L'+xn+','+base+'L'+X(pts[0][0])+','+base+'Z" fill="url(#'+uid+'b)"/><path d="'+idealD+'" fill="none" stroke="#5ab8ff" stroke-width="2" stroke-dasharray="5 7" stroke-linecap="round" opacity=".9"/><line x1="'+xn+'" x2="'+xn+'" y1="'+P.t+'" y2="'+base+'" stroke="rgba(90,184,255,.4)" stroke-width="1.5" stroke-dasharray="3 5"/><path d="'+burnD+'" fill="none" stroke="#3ee8b5" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" filter="url(#'+uid+'g)"/><path d="'+remD+'" fill="none" stroke="#ff7ab3" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" filter="url(#'+uid+'g)"/>';
+  var y1=Y(last[1]),y2=Y(idealNow),bx=Math.min(W-P.r-2,xn+18),gapColor=gap>=0?'#ff7ab3':'#3ee8b5';s+='<line x1="'+xn+'" x2="'+bx+'" y1="'+y1+'" y2="'+y1+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+xn+'" x2="'+bx+'" y1="'+y2+'" y2="'+y2+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+bx+'" x2="'+bx+'" y1="'+y1+'" y2="'+y2+'" stroke="'+gapColor+'" stroke-width="2"/>';
+  [[last[1],'#ff7ab3'],[last[2],'#3ee8b5'],[idealNow,'#5ab8ff']].forEach(function(q,i){s+='<circle cx="'+xn+'" cy="'+Y(q[0])+'" r="'+(i===2?4.5:5)+'" fill="#0a0a0c" stroke="'+q[1]+'" stroke-width="2.5"/>';});s+='</svg>';
+  var gapText=Math.abs(Math.round(gap))+'h '+(gap>0?'behind ideal':(gap<0?'ahead of ideal':'on ideal')),pillW=Math.max(190,gapText.length*13+48),placeLeft=bx+12+pillW>W-8,pillX=placeLeft?bx-12:bx+12,pillY=Math.max(48,Math.min(H-50,(y1+y2)/2)),pillTransform=placeLeft?'translate(-100%,-50%)':'translateY(-50%)';
+  s+='<div class="g2-chart-pill g2-day-pill" style="left:'+xn+'px;top:'+(P.t-2)+'px;transform:translate(-50%,-100%)">Day '+dayNo+'</div><div class="g2-chart-pill g2-gap-pill '+(gap<0?'ahead':'')+'" style="left:'+pillX+'px;top:'+pillY+'px;transform:'+pillTransform+'">'+(gap>0?'+':'')+gapText+'</div>';el.innerHTML=s;
+}
+function g2DrawDonut(rows,total,colors){
+  var el=document.getElementById('g2Donut');if(!el)return;var size=340,thick=28,r=(size-thick)/2,c=2*Math.PI*r,off=0,s='<svg viewBox="0 0 340 340"><circle cx="170" cy="170" r="'+r+'" fill="none" stroke="rgba(255,255,255,.035)" stroke-width="'+thick+'"/>';
+  rows.forEach(function(row,i){if(!(row.n>0))return;var len=(row.n/Math.max(1,total))*c,seg=Math.max(len-12-thick,.5),start=off+6+thick/2;s+='<circle cx="170" cy="170" r="'+r+'" fill="none" stroke="'+colors[i]+'" stroke-width="'+thick+'" stroke-dasharray="'+seg+' '+c+'" stroke-dashoffset="'+(-start)+'" stroke-linecap="round" transform="rotate(-90 170 170)"/>';off+=len;});el.innerHTML=s+'</svg>';
+}
+function doGlow2Live(d){
+  if(CH.lv){CH.lv.destroy();CH.lv=null;}if(CH.lvD){CH.lvD.destroy();CH.lvD=null;}
+  var sp=d.spInfo||{},dayNo=lvDayNo(d),title=sp.id||cur;if(window._space==='MSSD')title=String(title||'').replace(/^MSSD\s+/i,'');document.getElementById('g2Title').innerHTML=g2Title(title);document.getElementById('g2Day').textContent='Day '+dayNo;document.getElementById('g2Start').textContent=g2Date(sp.start);document.getElementById('g2End').textContent=g2Date(sp.end);document.getElementById('g2ChartDates').textContent=g2Date(sp.start)+' – '+g2Date(sp.end);g2SyncTime();lvCountdown(d,'g2Count','g2CountL');
+  var B=d.burn,total,left,unit='hrs';if(B&&B.p&&B.p.length){total=B.p[0][1];left=B.p[B.p.length-1][1];if(B.unit!=='h')unit='pts';}else{total=d.totEst||0;left=Math.max(0,(d.totEst||0)-(d.totLog||0));}
+  var timeLeft=lvTimeLeft(d),behind=left-timeLeft;
+  // MMS KPI must match the burndown annotation: Remaining now − Ideal now.
+  if(window._space==='MMS'&&B&&B.p&&B.p.length){
+    var gLast=B.p[B.p.length-1],gNw=B.nw||[],gSpan=Math.max(1,B.end-B.start),gOff=gNw.reduce(function(s,r){return s+Math.max(0,r[1]-r[0]);},0),gWork=Math.max(1,gSpan-gOff),gWorked=Math.min(gLast[0],B.end)-B.start;
+    gNw.forEach(function(r){if(r[0]<gLast[0])gWorked-=Math.max(0,Math.min(gLast[0],r[1])-r[0]);});
+    var gIdeal=Math.max(0,B.p[0][1]*(1-Math.max(0,gWorked)/gWork));behind=gLast[1]-gIdeal;
+  }
+  document.getElementById('g2Total').innerHTML=g2Num(total,unit);document.getElementById('g2Left').innerHTML=g2Num(left,unit);document.getElementById('g2Time').innerHTML=g2Num(timeLeft,'hrs');document.getElementById('g2Behind').innerHTML=g2Num(Math.abs(behind),'hrs');document.getElementById('g2BehindL').textContent=behind>0?'Hours behind':'Hours ahead';document.getElementById('g2BehindNote').textContent=behind>0?'Behind the ideal burndown':'Ahead of the ideal burndown';document.getElementById('g2BehindCard').classList.toggle('g2-ahead',behind<=0);
+  if(B&&B.p&&B.p.length){_g2ChartArgs=[B,dayNo];requestAnimationFrame(function(){g2DrawChart(B,dayNo);});}else document.getElementById('g2Chart').innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
+  var m=(window._bpMode==='without'&&d.exBP)?d.exBP:d,so0=m.statusOv||d.statusOv||{rows:[],total:0},statusOrder=window._space==='MSSD'?LV_MSSD_STATUS_ORDER:LV_STATUS_ORDER,statusColors=window._space==='MSSD'?LV_MSSD_STATUS_COLORS:G2_COLORS,rank=function(r){var i=statusOrder.indexOf(String(r.name||'').toLowerCase());return i<0?99:i;},rows=(so0.rows||[]).slice();
+  if(window._space==='MSSD'){
+    var present={};rows.forEach(function(r){present[String(r.name||'').toLowerCase()]=true;});
+    var labels={'to do':'To Do','done':'Done','in progress':'In Progress','in review':'In Review','dev done':'Dev Done','paused':'Paused','build awaiting':'Build Awaiting','cancelled':'Cancelled','reopened':'Reopened'};
+    statusOrder.forEach(function(k){if(!present[k])rows.push({name:labels[k]||k,n:0,items:[]});});
+  }
+  rows=rows.map(function(r,i){return{r:r,i:i};}).sort(function(a,b){return(rank(a.r)-rank(b.r))||(a.i-b.i);}).map(function(x){return x.r;});
+  var ex=0,colors=rows.map(function(r){return statusColors[String(r.name||'').toLowerCase()]||LV_EXTRA_COLORS[ex++%LV_EXTRA_COLORS.length];});
+  document.getElementById('g2StatusTotal').textContent=so0.total||0;g2DrawDonut(rows,so0.total||0,colors);window._g2Open=function(i){var r=rows[i];if(r)nvDetail('Status · '+r.name,r.n+' work item(s)',nvTaskRows(r.items));};document.getElementById('g2StatusList').innerHTML=rows.map(function(r,i){return'<div class="g2-status-row" style="--g2c:'+colors[i]+'" onclick="_g2Open('+i+')"><span class="sw"></span><span class="nm">'+escHtml(r.name)+'</span><span class="ct">'+r.n+'</span><span class="pc">'+pc(r.n,so0.total)+'%</span></div>';}).join('');
+  if(!_g2ResizeBound){_g2ResizeBound=true;window.addEventListener('resize',function(){if(currentPage==='live'&&(window._space==='MMS'||window._space==='MSSD')&&_g2ChartArgs)requestAnimationFrame(function(){g2DrawChart(_g2ChartArgs[0],_g2ChartArgs[1]);});});}
+}
 function doLiveView(d){
   lvWhenFontReady(d);
   var page=document.getElementById('page-live');
   if(!page) return;
   page.classList.toggle('mss3d-live',window._space==='MSSD');
+  // MMS and MSS3D use the Glow 2 team view; the person slides stay as before.
+  var useGlow2=window._space==='MMS'||window._space==='MSSD';
+  page.classList.toggle('glow2-live',useGlow2);
+  var rootEl=document.getElementById('root');if(rootEl)rootEl.classList.toggle('glow2-mode',useGlow2);
   if(!_lvShow.timer){ _lvShow.idx=0; _lvShow.start=Date.now(); _lvShow.swapped=false; _lvShow.timer=setInterval(lvShowTick,1000); }
   var groups=lvGroups(d);
   if(_lvShow.idx>groups.length) _lvShow.idx=0;
@@ -501,6 +595,7 @@ function doLiveView(d){
   }
   page.classList.remove('lv-quad-on');
   lvQuadDestroy();
+  if(useGlow2){doGlow2Live(d);return;}
 
   lvSlideProgress();
   lvSyncTime();
