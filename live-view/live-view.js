@@ -5,11 +5,11 @@
      Work left    = remaining estimate now (Jira burndown)
      Time left    = working days left × daily hours of the people in the sprint
                     (Team Capacity, 6h when someone isn't listed)
-     Hours behind = work left − guideline now (the chart's "BEHIND IDEAL" value)
-   Without a Jira burndown in hours the sprint estimate / logged hours are used, with
-   a straight guideline over the sprint's working days. */
+     Hours behind = work left − time left
+   Without Jira burndown data the sprint estimate / logged hours are used. */
 var _lvTimer=null;
-var LV_STATUS_COLORS={'done':'#3ee8b5','to do':'#f05252','in progress':'#fdd33c','in review':'#4c8df6','paused':'#9d6bf7'};
+var _lvSyncTimer=null;
+var LV_STATUS_COLORS={'done':'#3ee8b5','to do':'#f05252','in progress':'#ffe05c','in review':'#4c8df6','paused':'#9d6bf7'};
 // Donut + legend order: Done, To Do, In Progress, In Review, Paused, then any other status.
 var LV_STATUS_ORDER=['done','to do','in progress','in review','paused'];
 // Any other Jira status (not one of the five above) gets the next colour here.
@@ -17,12 +17,10 @@ var LV_EXTRA_COLORS=['#22c4c4','#5b6ef5','#ff8fab','#0aaa62','#ffc56b','#d98a0b'
 // My Supermarket Simulator - Delivery: Jira's requested nine-status legend.
 var LV_MSSD_STATUS_ORDER=['to do','done','in progress','in review','dev done','paused','build awaiting','cancelled','reopened'];
 var LV_MSSD_STATUS_COLORS={
-  'to do':'#f05252','done':'#3ee8b5','in progress':'#bf9100','in review':'#4c8df6',
+  'to do':'#f05252','done':'#3ee8b5','in progress':'#ffe05c','in review':'#4c8df6',
   'dev done':'#2f9ab8','paused':'#9d6bf7','build awaiting':'#858890',
   'cancelled':'#4c8df6','reopened':'#f05252'
 };
-// Any other Jira status (not one of the five above) gets the next colour here.
-var LV_EXTRA_COLORS=['#22c4c4','#5b6ef5','#ff8fab','#0aaa62','#ffc56b','#d98a0b'];
 
 function lvMonDay(v, pkt){
   var x=v instanceof Date?v:pd(v);
@@ -48,6 +46,20 @@ function lvDaysDone(d){
 }
 function lvHrs(v,unit){ return Math.round(v||0)+(unit||' hrs'); }
 
+// Full countdown days left in PKT, excluding Saturdays and Sundays.
+function lvCountdownWorkingDays(now, end){
+  if(!end) return 0;
+  var fullDays=Math.floor(Math.max(0,end.getTime()-now)/864e5), count=0;
+  var pkt=new Date(now+5*36e5);
+  var day=new Date(Date.UTC(pkt.getUTCFullYear(),pkt.getUTCMonth(),pkt.getUTCDate()));
+  for(var i=1;i<=fullDays;i++){
+    var next=new Date(day); next.setUTCDate(day.getUTCDate()+i);
+    var w=next.getUTCDay();
+    if(w!==0&&w!==6) count++;
+  }
+  return count;
+}
+
 // TV screens (same query as the TV block in live-view.css): canvas text on the
 // charts is scaled like the CSS, i.e. desktop px × (screen width ÷ 1920).
 var LV_TV_MQ='(min-width:861px) and (max-width:1919px) and (orientation:landscape) and (min-height:450px)';
@@ -61,20 +73,6 @@ function lvTimeLeft(d){
   var perDay=(d.assignees||[]).filter(function(a){ return a && a.n && a.n!=='Unassigned'; })
     .reduce(function(s,a){ var h=cap[normPersonName(a.n)]; return s+(h!=null?h:6); },0);
   return daysLeft*perDay;
-}
-
-// Full countdown days left in PKT, excluding Saturdays and Sundays.
-function lvCountdownWorkingDays(now, end){
-  if(!end) return 0;
-  var fullDays=Math.floor(Math.max(0,end.getTime()-now)/864e5), count=0;
-  var pkt=new Date(now+5*36e5);
-  var day=new Date(Date.UTC(pkt.getUTCFullYear(),pkt.getUTCMonth(),pkt.getUTCDate()));
-  for(var i=1;i<=fullDays;i++){
-    var next=new Date(day); next.setUTCDate(day.getUTCDate()+i);
-    var w=next.getUTCDay();
-    if(w!==0&&w!==6) count++;
-  }
-  return count;
 }
 
 function lvCountdown(d, valueId, labelId){
@@ -123,14 +121,9 @@ function lvLabelRoom(ch, last, B, gap, unit, k){
   return Math.max(6, Math.ceil(r)+8);
 }
 
-// Jira-style burndown in the Live View look. Returns the start / latest remaining
-// and gap = latest remaining − guideline at that moment (> 0 = behind ideal).
-// opt (quarter panels): {canvas, key, scale} — draw into another canvas, keep
-// the chart under CH[key], text × scale, no hover pop-up.
-function lvBurn(B, dayNo, opt){
-  opt=opt||{};
-  var cid=opt.canvas||'lvC', key=opt.key||'lv';
-  if(CH[key]) CH[key].destroy();
+// Jira-style burndown in the Live View look. Returns the ideal remaining now.
+function lvBurn(B, dayNo){
+  if(CH.lv) CH.lv.destroy();
   var c=cc(), unit=B.unit==='h'?'h':' pts', pts=B.p;
   var nw=(B.nw||[]).slice().sort(function(a,b){return a[0]-b[0];});
   var startVal=pts[0][1], total=B.end-B.start, off=nw.reduce(function(a,r){return a+(r[1]-r[0]);},0), work=Math.max(1,total-off);
@@ -140,7 +133,7 @@ function lvBurn(B, dayNo, opt){
   var guide=gT.map(function(t){ return {x:t,y:Math.round(idealAt(t)*100)/100}; });
   var rem=pts.map(function(x){return {x:x[0],y:x[1]};}), spent=pts.map(function(x){return {x:x[0],y:x[2]};});
   var last=pts[pts.length-1], gap=last[1]-idealAt(last[0]);
-  var font=LV_FONT, k=lvK()*(opt.scale||1);
+  var font=LV_FONT, k=lvK();
   var shade={id:'lvShade',beforeDatasetsDraw:function(ch){ var a=ch.chartArea,x=ch.scales.x,ctx=ch.ctx; ctx.save(); ctx.fillStyle=isDark?'rgba(150,160,220,.07)':'rgba(0,0,0,.05)';
     nw.forEach(function(r){ var x0=Math.max(a.left,x.getPixelForValue(r[0])), x1=Math.min(a.right,x.getPixelForValue(r[1])); if(x1>x0) ctx.fillRect(x0,a.top,x1-x0,a.bottom-a.top); }); ctx.restore(); }};
   // "DAY N" chip above the latest point, "+Xh BEHIND IDEAL" pill to its right.
@@ -189,7 +182,7 @@ function lvBurn(B, dayNo, opt){
     h.rows.forEach(function(r){ if(r.v==null) return; ctx.beginPath(); ctx.arc(x, ch.scales.y.getPixelForValue(r.v), 4.5, 0, Math.PI*2); ctx.fillStyle=r.c; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle='#000'; ctx.stroke(); });
     ctx.restore();
   }};
-  CH[key]=new Chart(document.getElementById(cid),{type:'line',plugins:[shade,marker,hoverLine],data:{datasets:[
+  CH.lv=new Chart(document.getElementById('lvC'),{type:'line',plugins:[shade,marker,hoverLine],data:{datasets:[
     {label:'Guideline',data:guide,borderColor:'#4d7cff',borderDash:[7,6],borderWidth:2.5,pointRadius:0,pointHoverRadius:0,fill:false,tension:0},
     {label:'Remaining Values',data:rem,borderColor:'#f05252',backgroundColor:'rgba(240,82,82,.14)',fill:'origin',borderWidth:2.5,pointRadius:0,pointHoverRadius:0,stepped:'after'},
     {label:'Time Spent',data:spent,borderColor:'#18c97a',borderWidth:2.5,pointRadius:0,pointHoverRadius:0,stepped:'after',fill:false}
@@ -203,12 +196,10 @@ function lvBurn(B, dayNo, opt){
         ticks:Object.assign({stepSize:3*864e5,maxRotation:0,callback:function(v){ return lvMonDay(new Date(v), true); }},tick)},
       y:{beginAtZero:true,max:yMax,grid:{color:c.grid},border:{display:false},
         ticks:Object.assign({maxTicksLimit:8,callback:function(v){ return v?Math.round(v)+unit.trim():''; }},tick)}}}});
-  if(key==='lv'){
-    // Everything the hover pop-up needs to work out the values at any moment.
-    CH.lv._lvData={pts:pts, idealAt:idealAt, unit:unit, start:B.start, end:B.end};
-    lvBindBurnHover(document.getElementById(cid));
-  }
-  return {start:startVal, left:last[1], gap:gap, unit:unit};
+  // Everything the hover pop-up needs to work out the values at any moment.
+  CH.lv._lvData={pts:pts, idealAt:idealAt, unit:unit, start:B.start, end:B.end};
+  lvBindBurnHover(document.getElementById('lvC'));
+  return {start:startVal, left:last[1], unit:unit};
 }
 
 // Burndown pop-up: follows the cursor across the whole chart and shows, for the
@@ -277,11 +268,6 @@ function lvSizeCenter(ch){
   if(l){ l.style.fontSize=Math.round(Math.max(13*lvK(), fs*0.24))+'px'; l.style.marginTop=Math.round(fs*0.06)+'px'; l.style.letterSpacing='.04em'; }
 }
 
-var _lvSyncTimer=null;
-// The Jira burndown only when it is in hours. A board whose burndown comes in
-// points can't be compared with the hours cards, so Live View shows no chart
-// there and uses the sprint estimate / logged hours instead.
-function lvBurnHours(d){ var B=d && d.burn; return B && B.unit==='h' ? B : null; }
 // Time the latest Jira sync finished in Apps Script (Sync Log, sent as
 // lastSync), top-right of the donut card, e.g. "3:00 AM" (PKT, 12-hour). It
 // moves on with every completed sync, changes or not, as soon
@@ -340,7 +326,6 @@ function lvSyncTime(){
   tick();
   if(d) _lvSyncTimer=setInterval(tick,1000);
 }
-
 // Day number = today's sprint day (D1…DN; D0 = planning day).
 function lvDayNo(d){
   var sp=d.spInfo||{}, today=lvToday(), sd=pd(sp.start), ed=pd(sp.end), dayNo=0;
@@ -349,10 +334,9 @@ function lvDayNo(d){
   return dayNo;
 }
 
-
 /* MMS Glow 2 ------------------------------------------------------------- */
 var _g2ChartArgs=null, _g2ResizeBound=false;
-var G2_COLORS={'done':'#3ee8b5','to do':'#f05252','in progress':'#ffd166','in review':'#4c8df6','paused':'#a68bff'};
+var G2_COLORS={'done':'#3ee8b5','to do':'#f05252','in progress':'#ffe05c','in review':'#4c8df6','paused':'#a68bff'};
 function g2Num(v,unit){ return Math.round(v||0)+'<small>'+(unit||'hrs')+'</small>'; }
 function g2Date(v){ var x=v instanceof Date?v:pd(v); return x?x.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'Asia/Karachi'}):'—'; }
 function g2Title(v){
@@ -404,7 +388,7 @@ function g2DrawChart(B,dayNo){
   s+='<path d="'+remD+'L'+xn+','+base+'L'+X(pts[0][0])+','+base+'Z" fill="url(#'+uid+'r)"/><path d="'+burnD+'L'+xn+','+base+'L'+X(pts[0][0])+','+base+'Z" fill="url(#'+uid+'b)"/><path d="'+idealD+'" fill="none" stroke="#5ab8ff" stroke-width="2" stroke-dasharray="5 7" stroke-linecap="round" opacity=".9"/><line x1="'+xn+'" x2="'+xn+'" y1="'+P.t+'" y2="'+base+'" stroke="rgba(90,184,255,.4)" stroke-width="1.5" stroke-dasharray="3 5"/><path d="'+burnD+'" fill="none" stroke="#3ee8b5" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" filter="url(#'+uid+'g)"/><path d="'+remD+'" fill="none" stroke="#ff7ab3" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" filter="url(#'+uid+'g)"/>';
   var y1=Y(last[1]),y2=Y(idealNow),bx=Math.min(W-P.r-2,xn+18),gapColor=gap>=0?'#ff7ab3':'#3ee8b5';s+='<line x1="'+xn+'" x2="'+bx+'" y1="'+y1+'" y2="'+y1+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+xn+'" x2="'+bx+'" y1="'+y2+'" y2="'+y2+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+bx+'" x2="'+bx+'" y1="'+y1+'" y2="'+y2+'" stroke="'+gapColor+'" stroke-width="2"/>';
   [[last[1],'#ff7ab3'],[last[2],'#3ee8b5'],[idealNow,'#5ab8ff']].forEach(function(q,i){s+='<circle cx="'+xn+'" cy="'+Y(q[0])+'" r="'+(i===2?4.5:5)+'" fill="#0a0a0c" stroke="'+q[1]+'" stroke-width="2.5"/>';});s+='</svg>';
-  var gapText=Math.abs(Math.round(gap))+'h '+(gap>0?'behind ideal':(gap<0?'ahead of ideal':'on ideal')),pillW=Math.max(190*k,gapText.length*13*k+48*k),placeLeft=bx+12*k+pillW>W-8*k,pillX=placeLeft?bx-12*k:bx+12*k,pillY=Math.max(48*k,Math.min(H-50*k,(y1+y2)/2)),pillTransform=placeLeft?'translate(-100%,-50%)':'translateY(-50%)';
+  var gapText=Math.abs(Math.round(gap))+'h '+(gap>0?'behind ideal':(gap<0?'ahead of ideal':'on ideal')),pillW=Math.max(190*k,gapText.length*15*k+50*k),placeLeft=bx+12*k+pillW>W-8*k,pillX=placeLeft?bx-12*k:bx+12*k,pillY=Math.max(48*k,Math.min(H-50*k,(y1+y2)/2)),pillTransform=placeLeft?'translate(-100%,-50%)':'translateY(-50%)';
   s+='<div class="g2-chart-pill g2-day-pill" style="left:'+xn+'px;top:'+(P.t-2)+'px;transform:translate(-50%,-100%)">Day '+dayNo+'</div><div class="g2-chart-pill g2-gap-pill '+(gap<0?'ahead':'')+'" style="left:'+pillX+'px;top:'+pillY+'px;transform:'+pillTransform+'">'+(gap>0?'+':'')+gapText+'</div>';el.innerHTML=s;
 }
 function g2DrawDonut(rows,total,colors){
@@ -435,19 +419,17 @@ function doGlow2Live(d){
   document.getElementById('g2StatusTotal').textContent=so0.total||0;g2DrawDonut(rows,so0.total||0,colors);window._g2Open=function(i){var r=rows[i];if(r)nvDetail('Status · '+r.name,r.n+' work item(s)',nvTaskRows(r.items));};document.getElementById('g2StatusList').innerHTML=rows.map(function(r,i){return'<div class="g2-status-row" style="--g2c:'+colors[i]+'" onclick="_g2Open('+i+')"><span class="sw"></span><span class="nm">'+escHtml(r.name)+'</span><span class="ct">'+r.n+'</span><span class="pc">'+pc(r.n,so0.total)+'%</span></div>';}).join('');
   if(!_g2ResizeBound){_g2ResizeBound=true;window.addEventListener('resize',function(){if(currentPage==='live'&&(window._space==='MMS'||window._space==='MSSD')&&_g2ChartArgs)requestAnimationFrame(function(){g2DrawChart(_g2ChartArgs[0],_g2ChartArgs[1]);});});}
 }
+
 function doLiveView(d){
   lvWhenFontReady(d);
   var page=document.getElementById('page-live');
   if(!page) return;
   page.classList.toggle('mss3d-live',window._space==='MSSD');
-  // MMS and MSS3D use the Glow 2 team view.
   var useGlow2=window._space==='MMS'||window._space==='MSSD';
   page.classList.toggle('glow2-live',useGlow2);
   var rootEl=document.getElementById('root');if(rootEl)rootEl.classList.toggle('glow2-mode',useGlow2);
-  var sp=d.spInfo||{}, dayNo=lvDayNo(d);
-
   if(useGlow2){doGlow2Live(d);return;}
-
+  var sp=d.spInfo||{}, dayNo=lvDayNo(d);
   lvSyncTime();
   var titleEl=document.getElementById('lvTitle');
   var liveTitle=sp.id||cur;
@@ -460,26 +442,24 @@ function doLiveView(d){
   lvCountdown(d);
 
   // Burndown + totals
-  var B=lvBurnHours(d), wrap=document.getElementById('lvChartWrap'), total, left, gap, unit=' hrs';
+  var B=d.burn, wrap=document.getElementById('lvChartWrap'), total, left, unit=' hrs';
   if(B && B.p && B.p.length){
     if(!wrap.querySelector('canvas')) wrap.innerHTML='<canvas id="lvC"></canvas>';
     var r=lvBurn(B, dayNo);
-    total=r.start; left=r.left; gap=r.gap; if(B.unit!=='h') unit=' pts';
+    total=r.start; left=r.left; if(B.unit!=='h') unit=' pts';
   } else {
     if(CH.lv){ CH.lv.destroy(); CH.lv=null; }
-    wrap.innerHTML='<div class="nv-dt-empty">Jira burndown in hours is not available for this sprint.</div>';
+    wrap.innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
     total=d.totEst||0; left=Math.max(0,(d.totEst||0)-(d.totLog||0));
-    var dTot=d.dTot||0;
-    gap=left-(dTot ? total*(1-Math.min(dTot,lvDaysDone(d))/dTot) : total);
   }
-  var timeLeft=lvTimeLeft(d), behind=gap>0.5;   // same rule as the chart's "BEHIND IDEAL" label
+  var timeLeft=lvTimeLeft(d), behind=left-timeLeft;
   document.getElementById('lvTotal').textContent=lvHrs(total,unit);
   document.getElementById('lvLeft').textContent=lvHrs(left,unit);
   document.getElementById('lvTime').textContent=lvHrs(timeLeft);
   var bEl=document.getElementById('lvBehind');
-  document.getElementById('lvBehindL').textContent=behind?'Hours Behind':'Hours Ahead';
-  bEl.textContent=lvHrs(Math.abs(gap),unit);
-  bEl.className='v '+(behind?'bad':'good');
+  document.getElementById('lvBehindL').textContent=behind>0?'Hours Behind':'Hours Ahead';
+  bEl.textContent=lvHrs(Math.abs(behind));
+  bEl.className='v '+(behind>0?'bad':'good');
 
   // Status donut — every work item in the sprint by Jira status (same data as the Overview).
   var m=(window._bpMode==='without' && d.exBP) ? d.exBP : d;
