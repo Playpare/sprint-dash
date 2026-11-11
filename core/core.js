@@ -88,7 +88,8 @@ function splitPages(html){
 var _sharedPartsPromise=null;
 function loadSharedParts(){
   if(!_sharedPartsPromise){
-    _sharedPartsPromise=Promise.all([fetchText('reports/reports.html'),fetchText('admin/admin.html'),fetchText('live-view/live-view.html')])
+    var liveViewUrl='live-view/live-view.html?v='+encodeURIComponent(window.DASH_VERSION||Date.now());
+    _sharedPartsPromise=Promise.all([fetchText('reports/reports.html'),fetchText('admin/admin.html'),fetchText(liveViewUrl)])
       .then(function(r){ DASH_PARTS.reports=splitPages(r[0]); DASH_PARTS.admin=splitPages(r[1]); DASH_PARTS.live=splitPages(r[2]); })
       .catch(function(e){ _sharedPartsPromise=null; throw e; });
   }

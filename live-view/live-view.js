@@ -63,7 +63,7 @@ function lvCountdownWorkingDays(now, end){
 // TV screens (same query as the TV block in live-view.css): canvas text on the
 // charts is scaled like the CSS, i.e. desktop px × (screen width ÷ 1920).
 var LV_TV_MQ='(min-width:861px) and (max-width:1919px) and (orientation:landscape) and (min-height:450px)';
-function lvK(){ return (window.matchMedia && window.matchMedia(LV_TV_MQ).matches) ? window.innerWidth/1920 : 1; }
+function lvK(){ return document.getElementById('g2App')&&document.getElementById('g2App').classList.contains('g2-fixed-tv')?1:((window.matchMedia&&window.matchMedia(LV_TV_MQ).matches)?window.innerWidth/1920:1); }
 
 // Working days left (today included while it is a sprint day) × Σ daily hours of the sprint's people.
 function lvTimeLeft(d){
@@ -351,6 +351,25 @@ function lvDayNo(d){
 /* MMS Glow 2 ------------------------------------------------------------- */
 var _g2ChartArgs=null, _g2ResizeBound=false;
 var G2_COLORS={'done':'#3ee8b5','to do':'#f05252','in progress':'#ffe05c','in review':'#4c8df6','paused':'#a68bff'};
+var G2_TV_DISPLAY={enabled:true,width:1920,height:1080};
+function g2TvEnabled(){return G2_TV_DISPLAY.enabled&&!/[?&]tv=0(?:&|$)/.test(location.search);}
+function g2FitTv(){
+  var app=document.getElementById('g2App');if(!app||!app.classList.contains('g2-fixed-tv'))return;
+  var scale=Math.min(window.innerWidth/G2_TV_DISPLAY.width,window.innerHeight/G2_TV_DISPLAY.height);
+  app.style.transform='translate(-50%,-50%) scale('+scale+')';app.style.webkitTransform=app.style.transform;
+}
+function g2SetupDisplay(){
+  var app=document.getElementById('g2App'),root=document.getElementById('root'),on=g2TvEnabled();if(!app)return;
+  app.classList.toggle('g2-fixed-tv',on);if(root)root.classList.toggle('g2-fixed-tv-mode',on);
+  if(on){app.style.width=G2_TV_DISPLAY.width+'px';app.style.height=G2_TV_DISPLAY.height+'px';g2FitTv();}
+  else{app.style.width='';app.style.height='';app.style.transform='';app.style.webkitTransform='';}
+  if(!window._g2FitBound){window._g2FitBound=true;window.addEventListener('resize',g2FitTv);}
+}
+function g2SoftColor(c,a){
+  var h=String(c||'').replace('#','');if(h.length===3)h=h.split('').map(function(x){return x+x;}).join('');
+  var r=parseInt(h.slice(0,2),16)||0,g=parseInt(h.slice(2,4),16)||0,b=parseInt(h.slice(4,6),16)||0;
+  return'rgba('+r+','+g+','+b+','+(a==null?0.13:a)+')';
+}
 function g2Num(v,unit){ return Math.round(v||0)+'<small>'+(unit||'hrs')+'</small>'; }
 function g2Date(v){ var x=v instanceof Date?v:pd(v); return x?x.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'Asia/Karachi'}):'—'; }
 function g2Title(v){
@@ -369,12 +388,12 @@ function g2SyncTime(){
   if(_lvSyncTimer){clearInterval(_lvSyncTimer);_lvSyncTimer=null;}
   function tick(){
     if(!document.body.contains(state)){clearInterval(_lvSyncTimer);_lvSyncTimer=null;return;}
-    if(!d){state.className='g2-pill g2-live-pill';state.innerHTML='<i></i>Next update —';updated.textContent='—';return;}
+    if(!d){state.className='g2-live-pill';state.innerHTML='<i></i>Next update —';updated.textContent='—';return;}
     var now=nowMs(), left=Math.max(0,deadline-now), sec=Math.ceil(left/1000), mm=Math.floor(sec/60), ss=sec%60;
     updated.textContent=d.toLocaleTimeString('en-US',{timeZone:'Asia/Karachi',hour:'numeric',minute:'2-digit',hour12:true});
-    if(now>=deadline+3*60000){state.className='g2-pill g2-live-pill delayed';state.innerHTML='<i></i>Update delayed…';}
-    else if(now>=deadline){state.className='g2-pill g2-live-pill';state.innerHTML='<i></i>Update in progress…';}
-    else{state.className='g2-pill g2-live-pill '+(left>3*60000?'safe':'');state.innerHTML='<i></i>Next update '+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
+    if(now>=deadline+3*60000){state.className='g2-live-pill delayed';state.innerHTML='<i></i>Update delayed…';}
+    else if(now>=deadline){state.className='g2-live-pill';state.innerHTML='<i></i>Update in progress…';}
+    else{state.className='g2-live-pill '+(left>3*60000?'safe':'');state.innerHTML='<i></i>Next update '+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
   }
   tick(); if(d)_lvSyncTimer=setInterval(tick,1000);
 }
@@ -403,8 +422,9 @@ function g2DrawChart(B,dayNo){
   var y1=Y(last[1]),y2=Y(idealNow),bx=Math.min(W-P.r-2,xn+18),gapColor=gap>=0?'#ff7ab3':'#3ee8b5';s+='<line x1="'+xn+'" x2="'+bx+'" y1="'+y1+'" y2="'+y1+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+xn+'" x2="'+bx+'" y1="'+y2+'" y2="'+y2+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+bx+'" x2="'+bx+'" y1="'+y1+'" y2="'+y2+'" stroke="'+gapColor+'" stroke-width="2"/>';
   [[last[1],'#ff7ab3'],[last[2],'#3ee8b5'],[idealNow,'#5ab8ff']].forEach(function(q,i){s+='<circle cx="'+xn+'" cy="'+Y(q[0])+'" r="'+(i===2?4.5:5)+'" fill="#0a0a0c" stroke="'+q[1]+'" stroke-width="2.5"/>';});s+='</svg>';
   var gapText=Math.abs(Math.round(gap))+'h '+(gap>0?'behind ideal':(gap<0?'ahead of ideal':'on ideal')),pillW=Math.max(230*k,gapText.length*19*k+58*k),placeLeft=bx+12*k+pillW>W-8*k,pillX=placeLeft?bx-12*k:bx+12*k,pillY=Math.max(52*k,Math.min(H-54*k,(y1+y2)/2)),pillTransform=placeLeft?'translate(-100%,-50%)':'translateY(-50%)';
-  var dayX=Math.max(70*k,xn-10*k),dayY=P.t+8*k;
-  s+='<div class="g2-chart-pill g2-day-pill" style="left:'+dayX+'px;top:'+dayY+'px;transform:translateX(-100%)">Day '+dayNo+'</div><div class="g2-chart-pill g2-gap-pill '+(gap<0?'ahead':'')+'" style="left:'+pillX+'px;top:'+pillY+'px;transform:'+pillTransform+'">'+(gap>0?'+':'')+gapText+'</div>';el.innerHTML=s;
+  // Keep the day badge above its marker while clamping it inside both chart edges.
+  var dayW=112*k,dayX=Math.max(dayW/2+6*k,Math.min(W-dayW/2-6*k,xn)),dayY=P.t+8*k;
+  s+='<div class="g2-chart-pill g2-day-pill" style="left:'+dayX+'px;top:'+dayY+'px;transform:translateX(-50%)">Day '+dayNo+'</div><div class="g2-chart-pill g2-gap-pill '+(gap<0?'ahead':'')+'" style="left:'+pillX+'px;top:'+pillY+'px;transform:'+pillTransform+'">'+(gap>0?'+':'')+gapText+'</div>';el.innerHTML=s;
 }
 function g2DrawDonut(rows,total,colors){
   var el=document.getElementById('g2Donut');if(!el)return;var size=340,thick=28,r=(size-thick)/2,c=2*Math.PI*r,off=0,s='<svg viewBox="0 0 340 340"><circle cx="170" cy="170" r="'+r+'" fill="none" stroke="rgba(255,255,255,.035)" stroke-width="'+thick+'"/>';
@@ -412,7 +432,8 @@ function g2DrawDonut(rows,total,colors){
 }
 function doGlow2Live(d){
   if(CH.lv){CH.lv.destroy();CH.lv=null;}if(CH.lvD){CH.lvD.destroy();CH.lvD=null;}
-  var sp=d.spInfo||{},dayNo=lvDayNo(d),title=sp.id||cur;if(window._space==='MSSD')title=String(title||'').replace(/^MSSD\s+/i,'');document.getElementById('g2Title').innerHTML=g2Title(title);document.getElementById('g2Start').textContent=g2Date(sp.start);document.getElementById('g2End').textContent=g2Date(sp.end);g2SyncTime();lvCountdown(d,'g2Count','g2CountL');
+  g2SetupDisplay();
+  var sp=d.spInfo||{},dayNo=lvDayNo(d),title=sp.id||cur;if(window._space==='MSSD')title=String(title||'').replace(/^MSSD\s+/i,'');document.getElementById('g2Title').innerHTML=g2Title(title);document.getElementById('g2Start').textContent=g2Date(sp.start);document.getElementById('g2End').textContent=g2Date(sp.end);document.getElementById('g2HeaderDay').textContent='Day '+dayNo;g2SyncTime();lvCountdown(d,'g2Count','g2CountL');
   var B=d.burn,total,left,unit='hrs';if(B&&B.p&&B.p.length){total=B.p[0][1];left=B.p[B.p.length-1][1];if(B.unit!=='h')unit='pts';}else{total=d.totEst||0;left=Math.max(0,(d.totEst||0)-(d.totLog||0));}
   var capacityLeft=lvTimeLeft(d),timeLeft=lvWallTimeLeft(d),behind=left-capacityLeft;
   // MMS KPI must match the burndown annotation: Remaining now − Ideal now.
@@ -431,7 +452,8 @@ function doGlow2Live(d){
   }
   rows=rows.map(function(r,i){return{r:r,i:i};}).sort(function(a,b){return(rank(a.r)-rank(b.r))||(a.i-b.i);}).map(function(x){return x.r;});
   var ex=0,colors=rows.map(function(r){return statusColors[String(r.name||'').toLowerCase()]||LV_EXTRA_COLORS[ex++%LV_EXTRA_COLORS.length];});
-  document.getElementById('g2StatusTotal').textContent=so0.total||0;g2DrawDonut(rows,so0.total||0,colors);window._g2Open=function(i){var r=rows[i];if(r)nvDetail('Status · '+r.name,r.n+' work item(s)',nvTaskRows(r.items));};document.getElementById('g2StatusList').innerHTML=rows.map(function(r,i){var statusName=String(r.name||'').toLowerCase();return'<div class="g2-status-row" data-status="'+escAttr(statusName)+'" style="--g2c:'+colors[i]+'" onclick="_g2Open('+i+')"><span class="sw"></span><span class="nm">'+escHtml(r.name)+'</span><span class="ct">'+r.n+'</span><span class="pc">'+pc(r.n,so0.total)+'%</span></div>';}).join('');
+  var statusTotal=so0.total||0,doneRow=rows.filter(function(r){return String(r.name||'').toLowerCase()==='done';})[0]||{name:'Done',n:0};
+  document.getElementById('g2StatusTotal').textContent=statusTotal;document.getElementById('g2DonePercent').textContent=pc(doneRow.n,statusTotal)+'%';document.getElementById('g2DoneName').textContent=doneRow.name;document.getElementById('g2DoneCount').textContent=doneRow.n;g2DrawDonut(rows,statusTotal,colors);window._g2Open=function(i){var r=rows[i];if(r)nvDetail('Status · '+r.name,r.n+' work item(s)',nvTaskRows(r.items));};document.getElementById('g2StatusList').innerHTML=rows.map(function(r,i){var statusName=String(r.name||'').toLowerCase(),pct=pc(r.n,statusTotal);return'<div class="g2-status-row" data-status="'+escAttr(statusName)+'" style="--g2c:'+colors[i]+';--g2soft:'+g2SoftColor(colors[i],.13)+'" onclick="_g2Open('+i+')"><span class="sw"></span><span class="nm">'+escHtml(r.name)+'</span><span class="bar"><i style="width:'+pct+'%"></i></span><span class="ct">'+r.n+'</span><span class="pc">'+pct+'%</span></div>';}).join('');
   if(!_g2ResizeBound){_g2ResizeBound=true;window.addEventListener('resize',function(){if(currentPage==='live'&&(window._space==='MMS'||window._space==='MSSD')&&_g2ChartArgs)requestAnimationFrame(function(){g2DrawChart(_g2ChartArgs[0],_g2ChartArgs[1]);});});}
 }
 
@@ -442,7 +464,7 @@ function doLiveView(d){
   page.classList.toggle('mss3d-live',window._space==='MSSD');
   var useGlow2=window._space==='MMS'||window._space==='MSSD';
   page.classList.toggle('glow2-live',useGlow2);
-  var rootEl=document.getElementById('root');if(rootEl)rootEl.classList.toggle('glow2-mode',useGlow2);
+  var rootEl=document.getElementById('root');if(rootEl){rootEl.classList.toggle('glow2-mode',useGlow2);if(!useGlow2)rootEl.classList.remove('g2-fixed-tv-mode');}
   if(useGlow2){doGlow2Live(d);return;}
   var sp=d.spInfo||{}, dayNo=lvDayNo(d);
   lvSyncTime();
