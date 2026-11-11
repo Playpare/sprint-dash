@@ -3,30 +3,39 @@
 <div class="g2-app" id="g2App">
   <header class="g2-header">
     <h1 class="g2-title" id="g2Title">—</h1>
-    <div class="g2-pills">
+    <span class="g2-sep"></span>
+    <div class="g2-pills g2-sprint-pills">
       <span class="g2-pill g2-date-pill"><b id="g2Start">—</b><span class="g2-dash">–</span><b id="g2End">—</b></span>
-      <span class="g2-pill g2-live-pill" id="g2SyncState"><i></i>Next update —</span>
-      <span class="g2-pill">Last updated <b id="g2Updated">—</b></span>
+      <span class="g2-pill g2-day-chip" id="g2HeaderDay">Day —</span>
     </div>
+    <div class="g2-header-right">
+      <div class="g2-sync g2-glass">
+        <span class="g2-live-pill" id="g2SyncState"><i></i>Next update —</span>
+        <span>Last updated <b id="g2Updated">—</b></span>
+      </div>
     <div class="g2-count g2-glass">
       <div class="g2-count-icon"><svg viewBox="0 0 24 24"><path d="M6 2h12M6 22h12M7 2c0 5 10 5 10 10S7 17 7 22M17 2c0 5-10 5-10 10s10 5 10 10"/></svg></div>
       <div><b id="g2Count">—</b><small id="g2CountL">Time remaining</small></div>
     </div>
-  </header>
-  <div class="g2-body">
-    <div class="g2-kpis">
-      <div class="g2-glass g2-kpi" style="--g2c:var(--g2-todo)"><div class="g2-kpi-label"><i></i>Total work</div><div class="g2-kpi-value" id="g2Total">—</div></div>
-      <div class="g2-glass g2-kpi" style="--g2c:var(--g2-prog)"><div class="g2-kpi-label"><i></i>Work left</div><div class="g2-kpi-value" id="g2Left">—</div></div>
-      <div class="g2-glass g2-kpi" style="--g2c:var(--g2-done)"><div class="g2-kpi-label"><i></i>Time left</div><div class="g2-kpi-value" id="g2Time">—</div></div>
-      <div class="g2-glass g2-kpi g2-alert" id="g2BehindCard" style="--g2c:var(--g2-review)"><div class="g2-kpi-label"><i></i><span id="g2BehindL">Hours behind</span></div><div class="g2-kpi-value" id="g2Behind">—</div><div class="g2-kpi-note" id="g2BehindNote">Behind the ideal burndown</div></div>
     </div>
+  </header>
+  <div class="g2-kpis">
+    <div class="g2-glass g2-kpi" style="--g2c:var(--g2-todo)"><span class="g2-kpi-icon">◇</span><div><div class="g2-kpi-label">Total work</div><div class="g2-kpi-value" id="g2Total">—</div></div></div>
+    <div class="g2-glass g2-kpi" style="--g2c:var(--g2-prog)"><span class="g2-kpi-icon">≡</span><div><div class="g2-kpi-label">Work left</div><div class="g2-kpi-value" id="g2Left">—</div></div></div>
+    <div class="g2-glass g2-kpi" style="--g2c:var(--g2-done)"><span class="g2-kpi-icon">◷</span><div><div class="g2-kpi-label">Time left</div><div class="g2-kpi-value" id="g2Time">—</div></div></div>
+    <div class="g2-glass g2-kpi g2-alert" id="g2BehindCard" style="--g2c:var(--g2-review)"><span class="g2-kpi-icon">↘</span><div><div class="g2-kpi-label"><span id="g2BehindL">Hours behind</span></div><div class="g2-kpi-value" id="g2Behind">—</div><div class="g2-kpi-note" id="g2BehindNote">Behind the ideal burndown</div></div></div>
+  </div>
+  <div class="g2-body">
     <section class="g2-glass g2-chart-card">
       <div class="g2-card-head"><h2>Burndown</h2><div class="g2-chart-legend"><span><i style="--g2c:var(--g2-review)"></i>Remaining</span><span><i style="--g2c:var(--g2-done)"></i>Time spent</span><span><i class="dash" style="--g2c:var(--g2-todo)"></i>Ideal</span></div></div>
       <div class="g2-chart" id="g2Chart"></div>
     </section>
     <aside class="g2-glass g2-status">
       <div class="g2-card-head"><h2>By status</h2><span class="g2-meta">All items</span></div>
-      <div class="g2-donut-wrap"><div id="g2Donut"></div><div class="g2-donut-center"><b id="g2StatusTotal">0</b><span>Total</span></div></div>
+      <div class="g2-status-top">
+        <div class="g2-donut-wrap"><div id="g2Donut"></div><div class="g2-donut-center"><b id="g2StatusTotal">0</b><span>Total</span></div></div>
+        <div class="g2-done-summary"><b id="g2DonePercent">0%</b><span><strong id="g2DoneName">Done</strong> · <span id="g2DoneCount">0</span> items</span></div>
+      </div>
       <div class="g2-status-list" id="g2StatusList"></div>
     </aside>
   </div>
