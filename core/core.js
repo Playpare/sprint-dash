@@ -1582,6 +1582,28 @@ function init(preserveSprint){
     });
 }
 
+// Only show actual sprints, newest first.
+// Valid sprint must have start & end that look like real dates
+// e.g. "30th March 2026" — not empty, not "BACKLOG", not "BUGS"
+function validSprints(json){
+  return ((json&&json.sprints)||[]).filter(function(s){
+    if(!s.id || !s.start || !s.end) return false;
+    if(s.id.match(/^(BUGS|BACKLOG)$/i)) return false;
+    if(s.start.match(/^(BUGS|BACKLOG)$/i)) return false;
+    // Start must contain a 4-digit year (e.g. 2025 or 2026)
+    return s.start.match(/20\d{2}/) && s.end.match(/20\d{2}/);
+  }).slice().reverse();
+}
+function fillSprintSelect(sps){
+  var sel=document.getElementById('spSel');
+  sel.innerHTML='';
+  sps.forEach(function(s){
+    var o=document.createElement('option');
+    o.value=s.id; o.textContent=s.id+' · '+s.start+' – '+s.end;
+    sel.appendChild(o);
+  });
+}
+
 // Puts one space's data on screen (sprint list, selected sprint, pages).
 function applyDashData(json, preserveSprint, loadSeq, requestedSpace){
       raw=json;
@@ -1593,27 +1615,13 @@ function applyDashData(json, preserveSprint, loadSeq, requestedSpace){
         return;
       }
       setDiscMode(false);
-      // Only show actual sprints:
-      // Valid sprint must have start & end that look like real dates
-      // e.g. "30th March 2026" — not empty, not "BACKLOG", not "BUGS"
-      var sps=(json.sprints||[]).filter(function(s){
-        if(!s.id || !s.start || !s.end) return false;
-        if(s.id.match(/^(BUGS|BACKLOG)$/i)) return false;
-        if(s.start.match(/^(BUGS|BACKLOG)$/i)) return false;
-        // Start must contain a 4-digit year (e.g. 2025 or 2026)
-        return s.start.match(/20\d{2}/) && s.end.match(/20\d{2}/);
-      }).slice().reverse();
+      var sps=validSprints(json);
       if(!sps.length){
         document.getElementById('mc').innerHTML='<div class="err">No sprint data found.<br>Run manualSync() in Apps Script first.</div>';
         return;
       }
       var sel=document.getElementById('spSel');
-      sel.innerHTML='';
-      sps.forEach(function(s){
-        var o=document.createElement('option');
-        o.value=s.id; o.textContent=s.id+' · '+s.start+' – '+s.end;
-        sel.appendChild(o);
-      });
+      fillSprintSelect(sps);
       if(preserveSprint && sps.some(function(s){return s.id===preserveSprint;})){
         cur=preserveSprint;
       } else {
@@ -1650,6 +1658,18 @@ function silentRefresh(){
     var isDiscNow=json.kind==='discovery';
     if(isDiscNow!==!!window._discData) return;                                    // space type changed — leave it to a normal load
     if(!isDiscNow && cur && !(json.sprints||[]).some(function(s){ return s.id===cur; })) return;
+    // A new sprint was created in Jira: add it to the dropdown. If this screen
+    // was following the newest sprint (e.g. the TV), move it to the new one.
+    if(!isDiscNow){
+      var sel=document.getElementById('spSel'), sps=validSprints(json);
+      var known=sel?Array.prototype.map.call(sel.options,function(o){return o.value;}):[];
+      if(sel && sps.length && known.indexOf(sps[0].id)<0){
+        var wasNewest=cur===known[0];
+        fillSprintSelect(sps);
+        if(wasNewest){ cur=sps[0].id; curTeam='All'; TEAM_COLORS={}; }
+        sel.value=cur;
+      }
+    }
     var pcEl=document.getElementById('mc'), scroll=pcEl?pcEl.scrollTop:0, winScroll=window.scrollY;
     var anim=Chart.defaults.animation;
     Chart.defaults.animation=false;

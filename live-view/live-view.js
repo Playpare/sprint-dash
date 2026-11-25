@@ -348,9 +348,22 @@ function lvDayNo(d){
   return dayNo;
 }
 
-/* MMS Glow 2 ------------------------------------------------------------- */
+/* Sprint board (MMS + MSSD) ---------------------------------------------------
+   One 1920×1080 composition (scaled to the screen in TV mode). Everything that
+   matters sits in the top ~800px; the bottom strip (hidden behind the desk
+   monitors on the office TV) only carries the sprint timeline + sync status.
+   KPIs: Total work · Work left · Time spent · Hours behind (with trend lines).  */
 var _g2ChartArgs=null, _g2ResizeBound=false;
-var G2_COLORS={'done':'#3ee8b5','to do':'#f05252','in progress':'#ffe05c','in review':'#4c8df6','paused':'#a68bff'};
+var G2_C={blue:'#6ea8fe',amber:'#f5b942',green:'#3dd68c',rose:'#ff6b81',sky:'#7cc4fa',ink:'#eef0f5',mute:'#8b91a3'};
+var G2_COLORS={'done':'#3dd68c','to do':'#ff6b81','in progress':'#f5b942','in review':'#6ea8fe','paused':'#a78bfa'};
+// MMS list order on the board.
+var G2_STATUS_ORDER=['to do','done','in progress','in review','paused'];
+// MSS3D: statuses grouped by stage in the Items by status card (MMS keeps the plain list).
+// A status not listed here goes into an extra "Other" group.
+var G2_MSSD_GROUPS=[['To start',['to do','reopened']],['Closed',['done','cancelled']],
+  ['In flight',['in progress','in review','paused']],['Ready to ship',['dev done','build awaiting']]];
+// MSS3D colour tweaks on the board so every status has its own colour.
+var G2_MSSD_COLOR_FIX={'dev done':'#22d3ee','cancelled':'#d4a373','reopened':'#ff8fab','build awaiting':'#fb923c'};
 var G2_TV_DISPLAY={enabled:true,width:1920,height:1080};
 function g2TvEnabled(){return G2_TV_DISPLAY.enabled&&!/[?&]tv=0(?:&|$)/.test(location.search);}
 function g2FitTv(){
@@ -365,17 +378,10 @@ function g2SetupDisplay(){
   else{app.style.width='';app.style.height='';app.style.transform='';app.style.webkitTransform='';}
   if(!window._g2FitBound){window._g2FitBound=true;window.addEventListener('resize',g2FitTv);}
 }
-function g2SoftColor(c,a){
-  var h=String(c||'').replace('#','');if(h.length===3)h=h.split('').map(function(x){return x+x;}).join('');
-  var r=parseInt(h.slice(0,2),16)||0,g=parseInt(h.slice(2,4),16)||0,b=parseInt(h.slice(4,6),16)||0;
-  return'rgba('+r+','+g+','+b+','+(a==null?0.13:a)+')';
-}
-function g2Num(v,unit){ return Math.round(v||0)+'<small>'+(unit||'hrs')+'</small>'; }
+function g2Num(v,unit){ return Math.round(v||0)+'<small>'+(unit==='hrs'?'h':(unit||'h'))+'</small>'; }
 function g2Date(v){ var x=v instanceof Date?v:pd(v); return x?x.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'Asia/Karachi'}):'—'; }
-function g2Title(v){
-  var a=String(v||'').trim().split(/\s+/), last=a.pop()||'';
-  return escHtml(a.join(' '))+(a.length?' ':'')+'<em>'+escHtml(last)+'</em>';
-}
+
+// Last sync + next-update countdown (footer). Same 6-minute window as before.
 function g2SyncTime(){
   var state=document.getElementById('g2SyncState'), updated=document.getElementById('g2Updated');
   if(!state||!updated) return;
@@ -388,73 +394,218 @@ function g2SyncTime(){
   if(_lvSyncTimer){clearInterval(_lvSyncTimer);_lvSyncTimer=null;}
   function tick(){
     if(!document.body.contains(state)){clearInterval(_lvSyncTimer);_lvSyncTimer=null;return;}
-    if(!d){state.className='g2-live-pill';state.innerHTML='<i></i>Next update —';updated.textContent='—';return;}
+    if(!d){state.className='g2-live-pill';state.innerHTML='<span class="g2-pulse"></span>Next update —';updated.textContent='—';return;}
     var now=nowMs(), left=Math.max(0,deadline-now), sec=Math.ceil(left/1000), mm=Math.floor(sec/60), ss=sec%60;
     updated.textContent=d.toLocaleTimeString('en-US',{timeZone:'Asia/Karachi',hour:'numeric',minute:'2-digit',hour12:true});
-    if(now>=deadline+3*60000){state.className='g2-live-pill delayed';state.innerHTML='<i></i>Update delayed…';}
-    else if(now>=deadline){state.className='g2-live-pill';state.innerHTML='<i></i>Update in progress…';}
-    else{state.className='g2-live-pill '+(left>3*60000?'safe':'');state.innerHTML='<i></i>Next update '+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
+    if(now>=deadline+3*60000){state.className='g2-live-pill delayed';state.innerHTML='<span class="g2-pulse"></span>Update delayed…';}
+    else if(now>=deadline){state.className='g2-live-pill';state.innerHTML='<span class="g2-pulse"></span>Update in progress…';}
+    else{state.className='g2-live-pill '+(left>3*60000?'safe':'');state.innerHTML='<span class="g2-pulse"></span>Next update '+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
   }
   tick(); if(d)_lvSyncTimer=setInterval(tick,1000);
 }
-function g2Monotone(p){
-  var n=p.length;if(n<2)return'';if(n<3)return'M'+p.map(function(q){return q[0]+','+q[1];}).join('L');
-  var dx=[],m=[],t=[],i;for(i=0;i<n-1;i++){dx[i]=p[i+1][0]-p[i][0];m[i]=(p[i+1][1]-p[i][1])/Math.max(.001,dx[i]);}
-  t[0]=m[0];t[n-1]=m[n-2];for(i=1;i<n-1;i++)t[i]=m[i-1]*m[i]<=0?0:(m[i-1]+m[i])/2;
-  for(i=0;i<n-1;i++){if(m[i]===0){t[i]=t[i+1]=0;continue;}var a=t[i]/m[i],b=t[i+1]/m[i],s=a*a+b*b;if(s>9){var k=3/Math.sqrt(s);t[i]=k*a*m[i];t[i+1]=k*b*m[i];}}
-  var d='M'+p[0][0].toFixed(1)+','+p[0][1].toFixed(1);for(i=0;i<n-1;i++){var h=dx[i]/3;d+='C'+(p[i][0]+h).toFixed(1)+','+(p[i][1]+t[i]*h).toFixed(1)+' '+(p[i+1][0]-h).toFixed(1)+','+(p[i+1][1]-t[i+1]*h).toFixed(1)+' '+p[i+1][0].toFixed(1)+','+p[i+1][1].toFixed(1);}return d;
+
+// Ideal (guideline) remaining at time t: straight burn over working time only.
+function g2Ideal(B){
+  var nw=(B.nw||[]).slice().sort(function(a,b){return a[0]-b[0];}), span=Math.max(1,B.end-B.start), startVal=B.p[0][1];
+  var off=nw.reduce(function(s,r){return s+Math.max(0,Math.min(r[1],B.end)-Math.max(r[0],B.start));},0), work=Math.max(1,span-off);
+  function workedTo(t){ t=Math.min(Math.max(t,B.start),B.end); var w=t-B.start;
+    nw.forEach(function(r){ var a=Math.max(r[0],B.start), b=Math.min(r[1],t); if(b>a) w-=b-a; }); return Math.max(0,w); }
+  return function(t){ return Math.max(0,startVal*(1-workedTo(t)/work)); };
 }
-function g2DrawChart(B,dayNo){
+
+// Small trend line for a KPI card.
+function g2Spark(vals,col){
+  vals=(vals||[]).filter(function(v){return isFinite(v);});
+  if(vals.length>160){ var k=vals.length/160, s=[]; for(var i=0;i<160;i++) s.push(vals[Math.floor(i*k)]); s.push(vals[vals.length-1]); vals=s; }
+  if(vals.length<2) return '';
+  var W=340,H=64,lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals),pad=(hi-lo)*.12+1;lo-=pad;hi+=pad;
+  var P=vals.map(function(v,i){return [W*i/(vals.length-1),H-H*(v-lo)/(hi-lo)];});
+  var d='M'+P.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' L'), id='g2s'+Math.random().toString(36).slice(2,8);
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+col+'" stop-opacity=".35"/><stop offset="1" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'
+    +'<path d="'+d+' L'+W+','+H+' L0,'+H+' Z" fill="url(#'+id+')"/><path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+function g2NiceStep(top){
+  var c=[5,10,20,25,50,100,200,250,500,1000,2000,5000];
+  for(var i=0;i<c.length;i++) if(top*1.08/c[i]<=5) return c[i];
+  return c[c.length-1];
+}
+
+// Burndown: guideline · remaining · time spent · non-working days, a TODAY
+// marker and the "+Xh behind ideal" gap, with the lines labelled directly.
+function g2DrawChart(B){
   var el=document.getElementById('g2Chart');if(!el||!B||!B.p||!B.p.length)return;
-  var W=el.clientWidth||700,H=el.clientHeight||500,k=lvK(),P={l:84*k,r:30*k,t:36*k,b:62*k},pts=B.p,start=B.start,end=B.end,last=pts[pts.length-1],nw=(B.nw||[]).slice().sort(function(a,b){return a[0]-b[0];});
-  var maxV=Math.max.apply(null,pts.map(function(p){return Math.max(p[1]||0,p[2]||0);})),yMax=Math.max(100,Math.ceil(maxV/100)*100),span=Math.max(1,end-start),off=nw.reduce(function(s,r){return s+Math.max(0,r[1]-r[0]);},0),work=Math.max(1,span-off);
-  var X=function(t){return P.l+(t-start)/span*(W-P.l-P.r);},Y=function(v){return P.t+(1-(v||0)/yMax)*(H-P.t-P.b);};
-  function workedTo(t){var w=Math.min(t,end)-start;nw.forEach(function(r){if(r[0]<t)w-=Math.max(0,Math.min(t,r[1])-r[0]);});return Math.max(0,w);}
-  function idealAt(t){return Math.max(0,pts[0][1]*(1-workedTo(t)/work));}
-  var guideT=[start];nw.forEach(function(r){guideT.push(r[0],r[1]);});guideT.push(end);guideT=guideT.filter(function(t,i,a){return t>=start&&t<=end&&(!i||t!==a[i-1]);});
-  var rem=pts.map(function(p){return[X(p[0]),Y(p[1])];}),burn=pts.map(function(p){return[X(p[0]),Y(p[2])];}),ideal=guideT.map(function(t){return[X(t),Y(idealAt(t))];});
-  var remD=g2Monotone(rem),burnD=g2Monotone(burn),idealD='M'+ideal.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join('L'),base=Y(0),xn=X(last[0]),idealNow=idealAt(last[0]),gap=(last[1]||0)-idealNow,uid='g2'+Math.random().toString(36).slice(2,7);
-  var s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><defs><linearGradient id="'+uid+'r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7ab3" stop-opacity=".24"/><stop offset="1" stop-color="#ff7ab3" stop-opacity="0"/></linearGradient><linearGradient id="'+uid+'b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ee8b5" stop-opacity=".18"/><stop offset="1" stop-color="#3ee8b5" stop-opacity="0"/></linearGradient><filter id="'+uid+'g" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
-  nw.forEach(function(r){var x0=Math.max(P.l,X(r[0])),x1=Math.min(W-P.r,X(r[1]));if(x1>x0)s+='<rect x="'+x0+'" y="'+P.t+'" width="'+(x1-x0)+'" height="'+(base-P.t)+'" rx="'+(14*k)+'" fill="rgba(90,184,255,.04)"/><text x="'+((x0+x1)/2)+'" y="'+(P.t+20*k)+'" text-anchor="middle" font-size="'+(18*k)+'" font-weight="700" letter-spacing=".12em" fill="#ffd166">WEEKEND</text>';});
-  for(var h=0;h<=yMax;h+=100){s+='<line x1="'+P.l+'" x2="'+(W-P.r)+'" y1="'+Y(h)+'" y2="'+Y(h)+'" stroke="rgba(255,255,255,.055)" '+(h?'stroke-dasharray="1 7"':'')+'/><text x="'+(P.l-15*k)+'" y="'+(Y(h)+7*k)+'" text-anchor="end" font-size="'+(23*k)+'" font-weight="700" fill="#f0f0f3">'+h+'h</text>';}
-  for(var ti=0;ti<5;ti++){var tt=start+span*ti/4,label=new Date(tt).toLocaleDateString('en-US',{month:'short',day:'2-digit',timeZone:'Asia/Karachi'}).toUpperCase(),anchor=ti===0?'start':(ti===4?'end':'middle'),tx=X(tt)+(ti===0?-4*k:(ti===4?4*k:0));s+='<text x="'+tx+'" y="'+(base+38*k)+'" text-anchor="'+anchor+'" font-size="'+(23*k)+'" font-weight="700" letter-spacing=".06em" fill="#f0f0f3">'+label+'</text>';}
-  s+='<path d="'+remD+'L'+xn+','+base+'L'+X(pts[0][0])+','+base+'Z" fill="url(#'+uid+'r)"/><path d="'+burnD+'L'+xn+','+base+'L'+X(pts[0][0])+','+base+'Z" fill="url(#'+uid+'b)"/><path d="'+idealD+'" fill="none" stroke="#5ab8ff" stroke-width="2" stroke-dasharray="5 7" stroke-linecap="round" opacity=".9"/><line x1="'+xn+'" x2="'+xn+'" y1="'+P.t+'" y2="'+base+'" stroke="rgba(90,184,255,.4)" stroke-width="1.5" stroke-dasharray="3 5"/><path d="'+burnD+'" fill="none" stroke="#3ee8b5" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" filter="url(#'+uid+'g)"/><path d="'+remD+'" fill="none" stroke="#ff7ab3" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" filter="url(#'+uid+'g)"/>';
-  var y1=Y(last[1]),y2=Y(idealNow),bx=Math.min(W-P.r-2,xn+18),gapColor=gap>=0?'#ff7ab3':'#3ee8b5';s+='<line x1="'+xn+'" x2="'+bx+'" y1="'+y1+'" y2="'+y1+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+xn+'" x2="'+bx+'" y1="'+y2+'" y2="'+y2+'" stroke="'+gapColor+'" opacity=".6"/><line x1="'+bx+'" x2="'+bx+'" y1="'+y1+'" y2="'+y2+'" stroke="'+gapColor+'" stroke-width="2"/>';
-  [[last[1],'#ff7ab3'],[last[2],'#3ee8b5'],[idealNow,'#5ab8ff']].forEach(function(q,i){s+='<circle cx="'+xn+'" cy="'+Y(q[0])+'" r="'+(i===2?4.5:5)+'" fill="#0a0a0c" stroke="'+q[1]+'" stroke-width="2.5"/>';});s+='</svg>';
-  var gapText=Math.abs(Math.round(gap))+'h '+(gap>0?'behind ideal':(gap<0?'ahead of ideal':'on ideal')),pillW=Math.max(230*k,gapText.length*19*k+58*k),placeLeft=bx+12*k+pillW>W-8*k,pillX=placeLeft?bx-12*k:bx+12*k,pillY=Math.max(52*k,Math.min(H-54*k,(y1+y2)/2)),pillTransform=placeLeft?'translate(-100%,-50%)':'translateY(-50%)';
-  // Keep the day badge above its marker while clamping it inside both chart edges.
-  var dayW=112*k,dayX=Math.max(dayW/2+6*k,Math.min(W-dayW/2-6*k,xn)),dayY=P.t+8*k;
-  s+='<div class="g2-chart-pill g2-day-pill" style="left:'+dayX+'px;top:'+dayY+'px;transform:translateX(-50%)">Day '+dayNo+'</div><div class="g2-chart-pill g2-gap-pill '+(gap<0?'ahead':'')+'" style="left:'+pillX+'px;top:'+pillY+'px;transform:'+pillTransform+'">'+(gap>0?'+':'')+gapText+'</div>';el.innerHTML=s;
+  var W=el.clientWidth||1120,H=el.clientHeight||360,fs=20,L=70,R=24,T=36,Bm=40,pw=W-L-R,ph=H-T-Bm;
+  var pts=B.p,start=B.start,end=B.end,span=Math.max(1,end-start),last=pts[pts.length-1],ideal=g2Ideal(B),unit=B.unit==='h'?'h':' pts';
+  var nw=(B.nw||[]).slice().sort(function(a,b){return a[0]-b[0];});
+  var top=Math.max(pts[0][1],Math.max.apply(null,pts.map(function(p){return Math.max(p[1]||0,p[2]||0);})));
+  var step=g2NiceStep(top),yMax=Math.max(step,Math.ceil(top*1.08/step)*step);
+  var X=function(t){return L+(Math.min(Math.max(t,start),end)-start)/span*pw;},Y=function(v){return T+ph-(v||0)/yMax*ph;};
+  var uid='g2'+Math.random().toString(36).slice(2,7),s=[];
+  s.push('<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'"><defs>'
+    +'<linearGradient id="'+uid+'r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+G2_C.rose+'" stop-opacity=".32"/><stop offset="1" stop-color="'+G2_C.rose+'" stop-opacity=".02"/></linearGradient>'
+    +'<linearGradient id="'+uid+'s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+G2_C.green+'" stop-opacity=".28"/><stop offset="1" stop-color="'+G2_C.green+'" stop-opacity=".02"/></linearGradient>'
+    +'<filter id="'+uid+'sh" x="-20%" y="-40%" width="140%" height="180%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity=".55"/></filter></defs>');
+  // non-working days
+  nw.forEach(function(r){ var x0=X(r[0]),x1=X(r[1]); if(x1-x0<2) return;
+    s.push('<rect x="'+x0+'" y="'+T+'" width="'+(x1-x0)+'" height="'+ph+'" fill="#fff" opacity=".035"/>');
+    if(x1-x0>80) s.push('<text x="'+((x0+x1)/2)+'" y="'+(T+fs+2)+'" fill="rgba(255,255,255,.33)" font-size="'+(fs*.7)+'" font-weight="700" text-anchor="middle" letter-spacing="3">WEEKEND</text>'); });
+  // grid + y labels
+  for(var v=0;v<=yMax;v+=step) s.push('<line x1="'+L+'" x2="'+(L+pw)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="rgba(255,255,255,.08)" stroke-width="1.5"/>'
+    +'<text x="'+(L-16)+'" y="'+(Y(v)+fs*.35)+'" fill="rgba(255,255,255,.5)" font-size="'+fs+'" font-weight="600" text-anchor="end">'+v+'</text>');
+  // x labels: every 3 days + the last day (PKT)
+  var ticks=[],D=864e5; for(var t=start;t<=end;t+=3*D) if(end-t>2.5*D) ticks.push(t); ticks.push(end);
+  ticks.forEach(function(t,i){ s.push('<text x="'+X(t)+'" y="'+(T+ph+fs+12)+'" fill="rgba(255,255,255,.62)" font-size="'+fs+'" font-weight="600" text-anchor="'+(i===0?'start':(i===ticks.length-1?'end':'middle'))+'">'
+    +new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'Asia/Karachi'}).toUpperCase()+'</text>'); });
+  // lines and shading are clipped to the plot area so nothing draws past the axes
+  s.push('<defs><clipPath id="'+uid+'c"><rect x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'"/></clipPath></defs><g clip-path="url(#'+uid+'c)">');
+  // guideline (exact: straight over working time, flat over non-working days)
+  var gT=[start]; nw.forEach(function(r){gT.push(r[0],r[1]);}); gT.push(end);
+  gT=gT.filter(function(t){return t>=start&&t<=end;}).sort(function(a,b){return a-b;});
+  s.push('<path d="M'+gT.map(function(t){return X(t).toFixed(1)+','+Y(ideal(t)).toFixed(1);}).join(' L')+'" fill="none" stroke="'+G2_C.sky+'" stroke-width="3" stroke-dasharray="10 9" opacity=".75"/>');
+  // remaining + time spent (stepped, like Jira)
+  function stepD(k){ var d=''; pts.forEach(function(p,i){ var x=X(p[0]).toFixed(1),y=Y(p[k]).toFixed(1); d+=i?' H'+x+' V'+y:'M'+x+','+y; }); return d; }
+  var rD=stepD(1),sD=stepD(2),x0=X(pts[0][0]),xn=X(last[0]),base=Y(0);
+  s.push('<path d="'+rD+' V'+base+' H'+x0+' Z" fill="url(#'+uid+'r)"/><path d="'+sD+' V'+base+' H'+x0+' Z" fill="url(#'+uid+'s)"/>'
+    +'<path d="'+rD+'" fill="none" stroke="'+G2_C.rose+'" stroke-width="3.5" stroke-linejoin="round"/>'
+    +'<path d="'+sD+'" fill="none" stroke="'+G2_C.green+'" stroke-width="3.5" stroke-linejoin="round"/></g>');
+  if(!B.notStarted){
+    var iNow=ideal(last[0]),gap=(last[1]||0)-iNow,yR=Y(last[1]),yS=Y(last[2]),yI=Y(iNow);
+    // TODAY marker
+    s.push('<line x1="'+xn+'" x2="'+xn+'" y1="'+T+'" y2="'+(T+ph)+'" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-dasharray="4 6"/>');
+    var px=Math.max(L+60,Math.min(L+pw-60,xn));
+    s.push('<rect x="'+(px-60)+'" y="'+(T-30)+'" width="120" height="'+(fs+18)+'" rx="'+((fs+18)/2)+'" fill="'+G2_C.sky+'"/>'
+      +'<text x="'+px+'" y="'+(T-30+(fs+18)/2+fs*.36)+'" fill="#0b0d12" font-size="'+fs+'" font-weight="800" text-anchor="middle">TODAY</text>');
+    // gap to the guideline
+    var behind=gap>0.5,ahead=gap<-0.5,gc=behind?G2_C.rose:G2_C.green;
+    var gtxt=behind?'+'+Math.round(gap)+unit.trim():(ahead?Math.round(-gap)+unit.trim():'On ideal'),gsub=behind?' behind ideal':(ahead?' ahead of ideal':'');
+    if(behind||ahead) s.push('<line x1="'+xn+'" x2="'+xn+'" y1="'+yR+'" y2="'+yI+'" stroke="'+gc+'" stroke-width="4"/>');
+    var bf=fs*1.3,bw=(gtxt.length+gsub.length)*bf*.56+40,bh=bf+30;
+    var lf=fs*1.35,remT='Remaining '+Math.round(last[1])+unit.trim(),spT='Spent '+Math.round(last[2]||0)+'h';
+    var lw=Math.max(remT.length,spT.length)*lf*.56,pL=L+6,pR=L+pw-6,roomL=xn-pL,roomR=pR-xn,G=24;
+    // Pick sides so labels + gap pill always stay inside the plot area:
+    // labels left / pill right → labels right / pill left → both right → both left → pill on top.
+    var labSide,bx,pillTop=false;
+    if(roomL>=lw+G&&roomR>=bw+G){labSide='L';bx=xn+G;}
+    else if(roomR>=lw+G&&roomL>=bw+G){labSide='R';bx=xn-G-bw;}
+    else if(roomR>=lw+bw+3*G){labSide='R';bx=xn+G+lw+G;}
+    else if(roomL>=lw+bw+3*G){labSide='L';bx=xn-G-lw-G-bw;}
+    else {labSide=roomR>=roomL?'R':'L';pillTop=true;bx=Math.max(pL,Math.min(pR-bw,xn-bw/2));}
+    bx=Math.max(pL,Math.min(pR-bw,bx));
+    var by=pillTop?T+bh/2+46:(yR+yI)/2;
+    by=Math.max(T+bh/2+4,Math.min(T+ph-bh/2-4,by));
+    s.push('<rect x="'+bx+'" y="'+(by-bh/2)+'" width="'+bw+'" height="'+bh+'" rx="'+(bh/2)+'" fill="'+(behind?'#2a0f17':'#0e2419')+'" stroke="'+gc+'" stroke-width="2.5" filter="url(#'+uid+'sh)"/>'
+      +'<text x="'+(bx+20)+'" y="'+(by+bf*.36)+'" fill="#fff" font-size="'+bf+'" font-weight="800">'+gtxt+'<tspan fill="'+gc+'" font-weight="700">'+gsub+'</tspan></text>');
+    // points + direct labels
+    [[yR,G2_C.rose],[yS,G2_C.green],[yI,G2_C.sky]].forEach(function(q){ s.push('<circle cx="'+xn+'" cy="'+q[0]+'" r="9" fill="#0b0d12" stroke="'+q[1]+'" stroke-width="4"/>'); });
+    // Remaining label under its point, Spent label above its point — moved below
+    // the Spent point if the two would overlap; both kept inside the plot area.
+    var lx=labSide==='L'?Math.max(pL+lw,xn-20):Math.min(pR-lw,xn+20),la=labSide==='L'?'end':'start',yTop=T+lf+4,yBot=T+ph-8;
+    var ly1=Math.max(yTop,Math.min(yBot,yR+lf+16)),ly2=yS-18;
+    if(Math.abs(ly2-ly1)<lf*1.25) ly2=yS+lf+16;
+    if(Math.abs(ly2-ly1)<lf*1.25) ly2=ly1+lf*1.25;
+    ly2=Math.max(yTop,Math.min(yBot,ly2));
+    if(Math.abs(ly2-ly1)<lf*1.25) ly1=ly2-lf*1.25;
+    // Dark outline in a deep shade of each line's colour, set inline so app-wide styles can't strip it.
+    function halo(dark){ return '" stroke="'+dark+'" stroke-width="8" stroke-linejoin="round" paint-order="stroke" text-anchor="'+la+'" style="stroke:'+dark+'!important;stroke-width:8px!important;paint-order:stroke!important;stroke-linejoin:round">'; }
+    s.push('<text x="'+lx+'" y="'+ly1+'" fill="'+G2_C.rose+'" font-size="'+lf+'" font-weight="800'+halo('#3d0a14')+remT+'</text>'
+      +'<text x="'+lx+'" y="'+ly2+'" fill="'+G2_C.green+'" font-size="'+lf+'" font-weight="800'+halo('#06301d')+spT+'</text>');
+    if(end-last[0]>864e5){ var tl=last[0]+(end-last[0])*.45,ix=Math.min(pR-fs*1.3*3,X(tl)+18),iy=Math.max(yTop,Math.min(yBot,Y(ideal(tl))-20)); s.push('<text x="'+ix+'" y="'+iy+'" fill="'+G2_C.sky+'" font-size="'+(fs*1.3)+'" font-weight="800" stroke="#0a2638" stroke-width="8" stroke-linejoin="round" paint-order="stroke" style="stroke:#0a2638!important;stroke-width:8px!important;paint-order:stroke!important;stroke-linejoin:round">Ideal</text>'); }
+  }
+  s.push('</svg>');
+  el.innerHTML=s.join('');
 }
-function g2DrawDonut(rows,total,colors){
-  var el=document.getElementById('g2Donut');if(!el)return;var size=340,thick=28,r=(size-thick)/2,c=2*Math.PI*r,off=0,s='<svg viewBox="0 0 340 340"><circle cx="170" cy="170" r="'+r+'" fill="none" stroke="rgba(255,255,255,.035)" stroke-width="'+thick+'"/>';
-  rows.forEach(function(row,i){if(!(row.n>0))return;var len=(row.n/Math.max(1,total))*c,seg=Math.max(len-12-thick,.5),start=off+6+thick/2;s+='<circle cx="170" cy="170" r="'+r+'" fill="none" stroke="'+colors[i]+'" stroke-width="'+thick+'" stroke-dasharray="'+seg+' '+c+'" stroke-dashoffset="'+(-start)+'" stroke-linecap="round" transform="rotate(-90 170 170)"/>';off+=len;});el.innerHTML=s+'</svg>';
-}
+
 function doGlow2Live(d){
   if(CH.lv){CH.lv.destroy();CH.lv=null;}if(CH.lvD){CH.lvD.destroy();CH.lvD=null;}
   g2SetupDisplay();
-  var sp=d.spInfo||{},dayNo=lvDayNo(d),title=sp.id||cur;if(window._space==='MSSD')title=String(title||'').replace(/^MSSD\s+/i,'');document.getElementById('g2Title').innerHTML=g2Title(title);document.getElementById('g2Start').textContent=g2Date(sp.start);document.getElementById('g2End').textContent=g2Date(sp.end);document.getElementById('g2HeaderDay').textContent='Day '+dayNo;g2SyncTime();lvCountdown(d,'g2Count','g2CountL');
-  var B=d.burn,total,left,unit='hrs';if(B&&B.p&&B.p.length){total=B.p[0][1];left=B.p[B.p.length-1][1];if(B.unit!=='h')unit='pts';}else{total=d.totEst||0;left=Math.max(0,(d.totEst||0)-(d.totLog||0));}
-  var capacityLeft=lvTimeLeft(d),timeLeft=lvWallTimeLeft(d),behind=left-capacityLeft;
-  // MMS KPI must match the burndown annotation: Remaining now − Ideal now.
-  if(window._space==='MMS'&&B&&B.p&&B.p.length){
-    var gLast=B.p[B.p.length-1],gNw=B.nw||[],gSpan=Math.max(1,B.end-B.start),gOff=gNw.reduce(function(s,r){return s+Math.max(0,r[1]-r[0]);},0),gWork=Math.max(1,gSpan-gOff),gWorked=Math.min(gLast[0],B.end)-B.start;
-    gNw.forEach(function(r){if(r[0]<gLast[0])gWorked-=Math.max(0,Math.min(gLast[0],r[1])-r[0]);});
-    var gIdeal=Math.max(0,B.p[0][1]*(1-Math.max(0,gWorked)/gWork));behind=gLast[1]-gIdeal;
-  }
-  document.getElementById('g2Total').innerHTML=g2Num(total,unit);document.getElementById('g2Left').innerHTML=g2Num(left,unit);document.getElementById('g2Time').innerHTML=g2TimeHours(timeLeft);document.getElementById('g2Behind').innerHTML=g2Num(Math.abs(behind),'hrs');document.getElementById('g2BehindL').textContent=behind>0?'Hours behind':'Hours ahead';document.getElementById('g2BehindNote').textContent=behind>0?'Behind the ideal burndown':'Ahead of the ideal burndown';document.getElementById('g2BehindCard').classList.toggle('g2-ahead',behind<=0);
-  if(B&&B.p&&B.p.length){_g2ChartArgs=[B,dayNo];requestAnimationFrame(function(){g2DrawChart(B,dayNo);});}else document.getElementById('g2Chart').innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
-  var m=(window._bpMode==='without'&&d.exBP)?d.exBP:d,so0=m.statusOv||d.statusOv||{rows:[],total:0},statusOrder=window._space==='MSSD'?LV_MSSD_STATUS_ORDER:LV_STATUS_ORDER,statusColors=window._space==='MSSD'?LV_MSSD_STATUS_COLORS:G2_COLORS,rank=function(r){var i=statusOrder.indexOf(String(r.name||'').toLowerCase());return i<0?99:i;},rows=(so0.rows||[]).slice();
+  var $=function(id){return document.getElementById(id);};
+  var sp=d.spInfo||{},dayNo=lvDayNo(d),title=sp.id||cur;
+  if(window._space==='MSSD') title=String(title||'').replace(/^MSSD\s+/i,'');
+  $('g2Title').textContent=title||'—';
+  $('g2Start').textContent=g2Date(sp.start);$('g2End').textContent=g2Date(sp.end);
+  g2SyncTime();lvCountdown(d,'g2Count','g2CountL');
+
+  // Totals (Jira burndown when available, else sprint estimate / logged hours)
+  var B=d.burn,hasB=!!(B&&B.p&&B.p.length),unit='hrs',total,left,spent;
+  if(hasB){var lp=B.p[B.p.length-1];total=B.p[0][1];left=lp[1];spent=lp[2]||0;if(B.unit!=='h')unit='pts';}
+  else{total=d.totEst||0;left=Math.max(0,(d.totEst||0)-(d.totLog||0));spent=d.totLog||0;}
+  var ideal=hasB?g2Ideal(B):null,behind=left-lvTimeLeft(d);
+  // MMS: Hours behind = Remaining now − Ideal now (matches the burndown gap).
+  if(window._space==='MMS'&&hasB) behind=left-ideal(B.p[B.p.length-1][0]);
+
+  // Total work — bar = hours logged vs. estimate (or burned share for points)
+  var barPct=unit==='hrs'?(total?spent/total*100:0):(total?(total-left)/total*100:0);
+  $('g2Total').innerHTML=g2Num(total,unit);
+  $('g2TotalBar').style.width=Math.max(0,Math.min(100,barPct))+'%';
+  // Work left
+  $('g2Left').innerHTML=g2Num(left,unit);
+  $('g2LeftSub').textContent=(total?Math.round(left/total*100):0)+'% of total';
+  $('g2LeftSpark').innerHTML=hasB?g2Spark(B.p.map(function(p){return p[1];}),G2_C.amber):'';
+  // Time spent
+  $('g2Spent').innerHTML=g2Num(spent,'hrs');
+  $('g2SpentSub').textContent=unit==='hrs'&&total?Math.round(spent/total*100)+'% of estimate':'logged in Jira';
+  $('g2SpentSpark').innerHTML=hasB?g2Spark(B.p.map(function(p){return p[2]||0;}),G2_C.green):'';
+  // Hours behind / ahead
+  var isBehind=behind>0;
+  $('g2Behind').innerHTML=g2Num(Math.abs(behind),'hrs');
+  $('g2BehindL').textContent=isBehind?'Hours behind':'Hours ahead';
+  $('g2BehindSub').textContent=window._space==='MMS'?(isBehind?'vs. ideal':'ahead of ideal'):'vs. time left';
+  $('g2BehindCard').classList.toggle('g2-ahead',!isBehind);
+  $('g2BehindSpark').innerHTML=hasB?g2Spark(B.p.map(function(p){return p[1]-ideal(p[0]);}),isBehind?G2_C.rose:G2_C.green):'';
+
+  // Burndown
+  if(hasB){_g2ChartArgs=[B];requestAnimationFrame(function(){g2DrawChart(B);});}
+  else $('g2Chart').innerHTML='<div class="nv-dt-empty">Jira burndown data is not available for this sprint.</div>';
+
+  // Items by status (same data / order / colours rules as before)
+  var m=(window._bpMode==='without'&&d.exBP)?d.exBP:d,so0=m.statusOv||d.statusOv||{rows:[],total:0};
+  var statusOrder=window._space==='MSSD'?LV_MSSD_STATUS_ORDER:G2_STATUS_ORDER,statusColors=window._space==='MSSD'?LV_MSSD_STATUS_COLORS:G2_COLORS;
+  var rank=function(r){var i=statusOrder.indexOf(String(r.name||'').toLowerCase());return i<0?99:i;},rows=(so0.rows||[]).slice();
   if(window._space==='MSSD'){
     var present={};rows.forEach(function(r){present[String(r.name||'').toLowerCase()]=true;});
     var labels={'to do':'To Do','done':'Done','in progress':'In Progress','in review':'In Review','dev done':'Dev Done','paused':'Paused','build awaiting':'Build Awaiting','cancelled':'Cancelled','reopened':'Reopened'};
     statusOrder.forEach(function(k){if(!present[k])rows.push({name:labels[k]||k,n:0,items:[]});});
   }
   rows=rows.map(function(r,i){return{r:r,i:i};}).sort(function(a,b){return(rank(a.r)-rank(b.r))||(a.i-b.i);}).map(function(x){return x.r;});
-  var ex=0,colors=rows.map(function(r){return statusColors[String(r.name||'').toLowerCase()]||LV_EXTRA_COLORS[ex++%LV_EXTRA_COLORS.length];});
+  var ex=0,colors=rows.map(function(r){var k=String(r.name||'').toLowerCase();return (window._space==='MSSD'&&G2_MSSD_COLOR_FIX[k])||statusColors[k]||LV_EXTRA_COLORS[ex++%LV_EXTRA_COLORS.length];});
   var statusTotal=so0.total||0,doneRow=rows.filter(function(r){return String(r.name||'').toLowerCase()==='done';})[0]||{name:'Done',n:0};
-  document.getElementById('g2StatusTotal').textContent=statusTotal;document.getElementById('g2DonePercent').textContent=pc(doneRow.n,statusTotal)+'%';document.getElementById('g2DoneName').textContent=doneRow.name;document.getElementById('g2DoneCount').textContent=doneRow.n;g2DrawDonut(rows,statusTotal,colors);window._g2Open=function(i){var r=rows[i];if(r)nvDetail('Status · '+r.name,r.n+' work item(s)',nvTaskRows(r.items));};document.getElementById('g2StatusList').innerHTML=rows.map(function(r,i){var statusName=String(r.name||'').toLowerCase(),pct=pc(r.n,statusTotal);return'<div class="g2-status-row" data-status="'+escAttr(statusName)+'" style="--g2c:'+colors[i]+';--g2soft:'+g2SoftColor(colors[i],.13)+'" onclick="_g2Open('+i+')"><span class="sw"></span><span class="nm">'+escHtml(r.name)+'</span><span class="bar"><i style="width:'+pct+'%"></i></span><span class="ct">'+r.n+'</span><span class="pc">'+pct+'%</span></div>';}).join('');
-  if(!_g2ResizeBound){_g2ResizeBound=true;window.addEventListener('resize',function(){if(currentPage==='live'&&(window._space==='MMS'||window._space==='MSSD')&&_g2ChartArgs)requestAnimationFrame(function(){g2DrawChart(_g2ChartArgs[0],_g2ChartArgs[1]);});});}
+  var maxN=Math.max.apply(null,rows.map(function(r){return r.n||0;}).concat([1]));
+  $('g2StatusTotal').textContent=statusTotal;
+  $('g2StatusCard').classList.toggle('g2-compact',rows.length>6);
+  window._g2Open=function(i){var r=rows[i];if(r)nvDetail('Status · '+r.name,r.n+' work item(s)',nvTaskRows(r.items));};
+  var mssd=window._space==='MSSD';
+  $('g2StatusCard').classList.toggle('g2-grouped',mssd);
+  if(mssd){
+    // Grouped by stage: big group total + split bar + the statuses inside it.
+    var at={},used={},groups=[];
+    rows.forEach(function(r,i){at[String(r.name||'').toLowerCase()]=i;});
+    G2_MSSD_GROUPS.forEach(function(g){var m=g[1].filter(function(k){return at[k]!=null;}).map(function(k){used[at[k]]=1;return at[k];});if(m.length)groups.push({name:g[0],m:m});});
+    var other=rows.map(function(r,i){return i;}).filter(function(i){return !used[i];});
+    if(other.length) groups.push({name:'Other',m:other});
+    $('g2StatusList').innerHTML=groups.map(function(g){
+      var tot=g.m.reduce(function(s,i){return s+(rows[i].n||0);},0);
+      var nz=g.m.filter(function(i){return rows[i].n>0;}),segs=nz.map(function(i){return '<span class="g2-seg" style="flex:'+rows[i].n+';background:'+colors[i]+'"></span>';}).join('');
+      var chips=g.m.map(function(i){var r=rows[i];return '<span class="g2-chip'+(r.n?'':' g2-zero')+'" onclick="_g2Open('+i+')"><span class="sw" style="background:'+colors[i]+'"></span>'+escHtml(r.name)+'<b>'+r.n+'</b></span>';}).join('');
+      return '<div class="g2-grp"><div class="g2-grp-head"><span class="g2-grp-name">'+escHtml(g.name)+'</span><span class="g2-grp-ct">'+tot+'<span class="pc">'+pc(tot,statusTotal)+'%</span></span></div>'
+        +'<div class="g2-grp-bar"><span class="g2-grp-fill" style="width:'+(statusTotal?tot/statusTotal*100:0)+'%;min-width:'+(nz.length*20)+'px">'+segs+'</span></div>'
+        +'<div class="g2-grp-chips">'+chips+'</div></div>';
+    }).join('');
+  } else $('g2StatusList').innerHTML=rows.map(function(r,i){
+    return '<div class="g2-srow" data-status="'+escAttr(String(r.name||'').toLowerCase())+'" style="--g2c:'+colors[i]+'" onclick="_g2Open('+i+')">'
+      +'<span class="nm"><span class="sw"></span>'+escHtml(r.name)+'</span>'
+      +'<span class="ct">'+r.n+'<span class="pc">'+pc(r.n,statusTotal)+'%</span></span>'
+      +'<span class="bar"><span class="g2-fill" style="width:'+((r.n||0)/maxN*100)+'%"></span></span></div>';
+  }).join('');
+
+  // Footer: sprint timeline (working days) — low priority, may be hidden on the TV
+  var tot=d.dTot||0,cells='';
+  for(var i=0;i<tot;i++) cells+='<span class="g2-tl-cell'+(i<dayNo-1?' g2-tl-done':(i===dayNo-1?' g2-tl-now':''))+'"></span>';
+  $('g2Timeline').innerHTML=cells;
+  $('g2DayLabel').textContent=tot?(dayNo?'Day '+dayNo+' of '+tot+' working days':'Planning day · '+tot+' working days'):'';
+  $('g2DayLabel').style.display=tot?'':'none';
+
+  if(!_g2ResizeBound){_g2ResizeBound=true;window.addEventListener('resize',function(){if(currentPage==='live'&&(window._space==='MMS'||window._space==='MSSD')&&_g2ChartArgs)requestAnimationFrame(function(){g2DrawChart(_g2ChartArgs[0]);});});}
 }
 
 function doLiveView(d){
