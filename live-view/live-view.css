@@ -222,13 +222,13 @@
    ========================================================================== */
 #page-live .g2-app{display:none}
 #page-live.glow2-live .lv-classic-view{display:none}
-#root.live-mode.glow2-mode,#root.live-mode.glow2-mode .main-area,#root.live-mode.glow2-mode .page-content,#root.live-mode.glow2-mode #page-live{background:#0b0d12}
+#root.live-mode.glow2-mode,#root.live-mode.glow2-mode .main-area,#root.live-mode.glow2-mode .page-content,#root.live-mode.glow2-mode #page-live{background:#000}
 #page-live.glow2-live{--font-body:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:var(--font-body);--font-display:var(--font-body);
-  --g2-bg:#0b0d12;--g2-ink:#eef0f5;--g2-mute:#8b91a3;--g2-line:rgba(255,255,255,.07);
+  --g2-bg:#000;--g2-ink:#eef0f5;--g2-mute:#8b91a3;--g2-line:rgba(255,255,255,.07);
   --g2-blue:#6ea8fe;--g2-amber:#f5b942;--g2-green:#3dd68c;--g2-rose:#ff6b81;--g2-sky:#7cc4fa;
   background:var(--g2-bg);color:var(--g2-ink)}
 #page-live.glow2-live .g2-app{box-sizing:border-box;position:relative;display:flex;flex-direction:column;height:100%;min-height:calc(100vh - 44px);
-  background:radial-gradient(1400px 700px at 15% -20%,#131a2b 0,transparent 60%),var(--g2-bg);
+  background:var(--g2-bg);
   font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--g2-ink);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
 #page-live.glow2-live .g2-app *{box-sizing:border-box}
 /* TV mode: fixed 1920×1080 canvas, scaled by g2FitTv() */
@@ -291,6 +291,9 @@
 #page-live.glow2-live .g2-srow .bar{grid-area:bar;height:12px;border-radius:6px;background:rgba(255,255,255,.055);margin-top:8px;overflow:hidden}
 #page-live.glow2-live .g2-srow .bar .g2-fill{display:block;height:100%;border-radius:5px;background:var(--g2c);transition:width .6s ease}
 #page-live.glow2-live .g2-srow:hover .nm{color:#fff}
+/* MMS: slightly larger status names */
+#page-live.glow2-live:not(.mss3d-live) .g2-srow .nm{font-size:36px;gap:16px}
+#page-live.glow2-live:not(.mss3d-live) .g2-srow .sw{width:18px;height:18px}
 /* More than 6 statuses (MSSD's nine): one line per status */
 #page-live.glow2-live .g2-status.g2-compact .g2-srow{grid-template-columns:230px minmax(20px,1fr) 150px;grid-template-areas:"nm bar ct";align-items:center}
 #page-live.glow2-live .g2-status.g2-compact .g2-srow .nm{font-size:25px;gap:10px}
@@ -315,10 +318,10 @@
 #page-live.glow2-live .g2-live-pill.delayed{color:var(--g2-rose)}
 @keyframes g2Pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* MSS3D only: no day timeline at the bottom; burndown + status use that space,
-   and the status card is wider so its bars get more room. */
-#page-live.glow2-live.mss3d-live .g2-foot{display:none}
-#page-live.glow2-live.mss3d-live .g2-app.g2-fixed-tv .g2-body{height:684px}
+/* MMS + MSS3D: no day timeline at the bottom; burndown + status use that space.
+   MSS3D only: the status card is wider so its bars get more room. */
+#page-live.glow2-live .g2-foot{display:none}
+#page-live.glow2-live .g2-app.g2-fixed-tv .g2-body{height:684px}
 #page-live.glow2-live.mss3d-live .g2-body{grid-template-columns:minmax(0,1fr) 620px}
 #page-live.glow2-live.mss3d-live .g2-status.g2-compact .g2-srow{grid-template-columns:205px minmax(40px,1fr) 128px;column-gap:16px}
 #page-live.glow2-live.mss3d-live .g2-status.g2-compact .g2-srow .bar{height:10px}

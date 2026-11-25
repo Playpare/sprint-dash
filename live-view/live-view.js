@@ -475,7 +475,7 @@ function g2DrawChart(B){
     s.push('<line x1="'+xn+'" x2="'+xn+'" y1="'+T+'" y2="'+(T+ph)+'" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-dasharray="4 6"/>');
     var px=Math.max(L+60,Math.min(L+pw-60,xn));
     s.push('<rect x="'+(px-60)+'" y="'+(T-30)+'" width="120" height="'+(fs+18)+'" rx="'+((fs+18)/2)+'" fill="'+G2_C.sky+'"/>'
-      +'<text x="'+px+'" y="'+(T-30+(fs+18)/2+fs*.36)+'" fill="#0b0d12" font-size="'+fs+'" font-weight="800" text-anchor="middle">TODAY</text>');
+      +'<text x="'+px+'" y="'+(T-30+(fs+18)/2+fs*.36)+'" fill="#000" font-size="'+fs+'" font-weight="800" text-anchor="middle">TODAY</text>');
     // gap to the guideline
     var behind=gap>0.5,ahead=gap<-0.5,gc=behind?G2_C.rose:G2_C.green;
     var gtxt=behind?'+'+Math.round(gap)+unit.trim():(ahead?Math.round(-gap)+unit.trim():'On ideal'),gsub=behind?' behind ideal':(ahead?' ahead of ideal':'');
@@ -497,7 +497,7 @@ function g2DrawChart(B){
     s.push('<rect x="'+bx+'" y="'+(by-bh/2)+'" width="'+bw+'" height="'+bh+'" rx="'+(bh/2)+'" fill="'+(behind?'#2a0f17':'#0e2419')+'" stroke="'+gc+'" stroke-width="2.5" filter="url(#'+uid+'sh)"/>'
       +'<text x="'+(bx+20)+'" y="'+(by+bf*.36)+'" fill="#fff" font-size="'+bf+'" font-weight="800">'+gtxt+'<tspan fill="'+gc+'" font-weight="700">'+gsub+'</tspan></text>');
     // points + direct labels
-    [[yR,G2_C.rose],[yS,G2_C.green],[yI,G2_C.sky]].forEach(function(q){ s.push('<circle cx="'+xn+'" cy="'+q[0]+'" r="9" fill="#0b0d12" stroke="'+q[1]+'" stroke-width="4"/>'); });
+    [[yR,G2_C.rose],[yS,G2_C.green],[yI,G2_C.sky]].forEach(function(q){ s.push('<circle cx="'+xn+'" cy="'+q[0]+'" r="9" fill="#000" stroke="'+q[1]+'" stroke-width="4"/>'); });
     // Remaining label under its point, Spent label above its point — moved below
     // the Spent point if the two would overlap; both kept inside the plot area.
     var lx=labSide==='L'?Math.max(pL+lw,xn-20):Math.min(pR-lw,xn+20),la=labSide==='L'?'end':'start',yTop=T+lf+4,yBot=T+ph-8;
